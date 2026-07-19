@@ -1,25 +1,34 @@
-import React, { useState } from 'react';
-import { router, useFocusEffect } from 'expo-router';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Dimensions, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useBudgetData } from '../../src/hooks/useBudgetData';
-import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from '../../src/theme';
-import { formatMonthKey } from '../../src/storage';
-import { BudgetState, Expense, AccountData } from '../../src/types';
+import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  Dimensions,
+  Image,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useBudgetData } from "../../src/hooks/useBudgetData";
+import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from "../../src/theme";
+import { formatMonthKey } from "../../src/storage";
+import { BudgetState, Expense, AccountData } from "../../src/types";
 
-const { width } = Dimensions.get('window');
-
-
+const { width } = Dimensions.get("window");
 
 export default function DashboardScreen() {
-  const { state, loading, currentMonth, currencySymbol, actions } = useBudgetData();
+  const { state, loading, currentMonth, currencySymbol, actions } =
+    useBudgetData();
 
   useFocusEffect(
     React.useCallback(() => {
       actions.loadData();
-    }, [actions.loadData])
+    }, [actions.loadData]),
   );
 
   if (loading || !state) {
@@ -38,21 +47,24 @@ export default function DashboardScreen() {
 
   Object.entries(monthData.accounts).forEach(([acctId, acct]) => {
     const id = parseInt(acctId);
-    if (state.activeAccountId !== 'all' && state.activeAccountId !== id) return;
+    if (state.activeAccountId !== "all" && state.activeAccountId !== id) return;
 
-    totalIncome += ((acct as AccountData).income || 0);
+    totalIncome += (acct as AccountData).income || 0;
     (acct as AccountData).expenses.forEach((exp: Expense) => {
-      const val = (exp.amount || 0);
+      const val = exp.amount || 0;
       totalExpense += val;
       allExpenses.push({ ...exp, accountId: id });
     });
   });
 
   const balance = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : '0.0';
+  const savingsRate =
+    totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : "0.0";
+
+  const photoUri = state.userProfile?.photoUri || null;
 
   const navigateMonth = (direction: number) => {
-    const [year, month] = currentMonth.split('-').map(Number);
+    const [year, month] = currentMonth.split("-").map(Number);
     const date = new Date(year, month - 1, 1);
     date.setMonth(date.getMonth() + direction);
     const newMonth = formatMonthKey(date);
@@ -60,19 +72,27 @@ export default function DashboardScreen() {
   };
 
   const handleDeleteExpense = (expense: Expense & { accountId?: number }) => {
-    const accountId = expense.accountId || (state.activeAccountId === 'all' ? state.accounts[0].id : state.activeAccountId);
+    const accountId =
+      expense.accountId ||
+      (state.activeAccountId === "all"
+        ? state.accounts[0].id
+        : state.activeAccountId);
     actions.deleteExpense(expense.id, accountId);
   };
 
   const handleEditExpense = (expense: Expense & { accountId?: number }) => {
-    const accountId = expense.accountId || (state.activeAccountId === 'all' ? state.accounts[0].id : state.activeAccountId);
+    const accountId =
+      expense.accountId ||
+      (state.activeAccountId === "all"
+        ? state.accounts[0].id
+        : state.activeAccountId);
     router.push({
-      pathname: '/modal',
+      pathname: "/modal",
       params: {
-        editMode: 'true',
+        editMode: "true",
         expenseId: expense.id,
-        accountId: accountId
-      }
+        accountId: accountId,
+      },
     });
   };
 
@@ -80,57 +100,106 @@ export default function DashboardScreen() {
     <View style={styles.header}>
       <View style={styles.headerTop}>
         <View>
-          <Text style={styles.greetingText}>
-            {state?.userProfile?.name ? `Hello, ${state.userProfile.name.split(' ')[0]}!` : 'Guest,'}
-          </Text>
-          <View style={styles.brandTitle}>
-            <Image source={require(`../../assets/images/vridhi_icon.jpg`)} style={styles.brandIcon} />
-            <Text style={styles.brandTitleText}> Welcome to Vridhi</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.profileBtn}
-          onPress={() => router.push('/profile')}
-        >
-          <LinearGradient
-            colors={COLORS.gradientPrimary}
-            style={styles.profileGradient}
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => router.push("/profile")}
           >
-            <Ionicons name="person" size={20} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={COLORS.gradientPrimary}
+              style={styles.profileGradient}
+            >
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="person" size={60} color={COLORS.primary} />
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.greetingText}>
+          {state?.userProfile?.name
+            ? `Hello, ${state.userProfile.name.split(" ")[0]}!`
+            : "Guest,"}
+        </Text>
+      </View>
+      <View style={styles.brandTitle}>
+        <Image
+          source={require(`../../assets/images/vridhi_icon.jpg`)}
+          style={styles.brandIcon}
+        />
+        <Text style={styles.brandTitleText}> Welcome to Vridhi</Text>
       </View>
 
       <View style={styles.monthNavRow}>
-        <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.monthNavIcon}>
+        <TouchableOpacity
+          onPress={() => navigateMonth(-1)}
+          style={styles.monthNavIcon}
+        >
           <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
         </TouchableOpacity>
         <View style={styles.monthDisplay}>
-          <Ionicons name="calendar-outline" size={16} color={COLORS.muted} style={{ marginRight: 6 }} />
+          <Ionicons
+            name="calendar-outline"
+            size={16}
+            color={COLORS.muted}
+            style={{ marginRight: 6 }}
+          />
           <Text style={styles.dateText}>{currentMonth}</Text>
         </View>
-        <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.monthNavIcon}>
+        <TouchableOpacity
+          onPress={() => navigateMonth(1)}
+          style={styles.monthNavIcon}
+        >
           <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.accountSelector}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingRight: 20 }}
+        >
           <TouchableOpacity
-            style={[styles.accountBadge, state.activeAccountId === 'all' && styles.accountBadgeActive]}
-            onPress={() => actions.switchAccount('all')}
+            style={[
+              styles.accountBadge,
+              state.activeAccountId === "all" && styles.accountBadgeActive,
+            ]}
+            onPress={() => actions.switchAccount("all")}
           >
-            <Text style={[styles.accountBadgeText, state.activeAccountId === 'all' && styles.accountBadgeTextActive]}>All Accounts</Text>
-          </TouchableOpacity>
-          {state.accounts.filter(a => !a.archived).map(acct => (
-            <TouchableOpacity
-              key={acct.id}
-              style={[styles.accountBadge, state.activeAccountId === acct.id && styles.accountBadgeActive]}
-              onPress={() => actions.switchAccount(acct.id)}
+            <Text
+              style={[
+                styles.accountBadgeText,
+                state.activeAccountId === "all" &&
+                  styles.accountBadgeTextActive,
+              ]}
             >
-              <Text style={[styles.accountBadgeText, state.activeAccountId === acct.id && styles.accountBadgeTextActive]}>{acct.name}</Text>
-            </TouchableOpacity>
-          ))}
+              All Accounts
+            </Text>
+          </TouchableOpacity>
+          {state.accounts
+            .filter((a) => !a.archived)
+            .map((acct) => (
+              <TouchableOpacity
+                key={acct.id}
+                style={[
+                  styles.accountBadge,
+                  state.activeAccountId === acct.id &&
+                    styles.accountBadgeActive,
+                ]}
+                onPress={() => actions.switchAccount(acct.id)}
+              >
+                <Text
+                  style={[
+                    styles.accountBadgeText,
+                    state.activeAccountId === acct.id &&
+                      styles.accountBadgeTextActive,
+                  ]}
+                >
+                  {acct.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
         </ScrollView>
       </View>
     </View>
@@ -150,41 +219,76 @@ export default function DashboardScreen() {
             <Text style={styles.savingsText}>{savingsRate}% saved</Text>
           </View>
         </View>
-        <Text style={styles.cardValue}>{currencySymbol}{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+        <Text style={styles.cardValue}>
+          {currencySymbol}
+          {balance.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </Text>
         <View style={styles.cardFooter}>
           <View style={styles.footerItem}>
-            <Ionicons name="arrow-up-circle" size={16} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.footerText}>Income: {currencySymbol}{totalIncome.toFixed(0)}</Text>
+            <Ionicons
+              name="arrow-up-circle"
+              size={16}
+              color="rgba(255,255,255,0.8)"
+            />
+            <Text style={styles.footerText}>
+              Income: {currencySymbol}
+              {totalIncome.toFixed(0)}
+            </Text>
           </View>
           <View style={styles.footerItem}>
-            <Ionicons name="arrow-down-circle" size={16} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.footerText}>Spent: {currencySymbol}{totalExpense.toFixed(0)}</Text>
+            <Ionicons
+              name="arrow-down-circle"
+              size={16}
+              color="rgba(255,255,255,0.8)"
+            />
+            <Text style={styles.footerText}>
+              Spent: {currencySymbol}
+              {totalExpense.toFixed(0)}
+            </Text>
           </View>
         </View>
       </LinearGradient>
 
       <View style={styles.miniCardsRow}>
-        <View style={[styles.miniCard, { backgroundColor: COLORS.successLight }]}>
-          <View style={[styles.miniIconBg, { backgroundColor: COLORS.success }]}>
+        <View
+          style={[styles.miniCard, { backgroundColor: COLORS.successLight }]}
+        >
+          <View
+            style={[styles.miniIconBg, { backgroundColor: COLORS.success }]}
+          >
             <Ionicons name="trending-up" size={16} color="#fff" />
           </View>
           <Text style={styles.miniLabel}>Income</Text>
-          <Text style={[styles.miniValue, { color: COLORS.success }]}>+{currencySymbol}{totalIncome.toFixed(0)}</Text>
+          <Text style={[styles.miniValue, { color: COLORS.success }]}>
+            +{currencySymbol}
+            {totalIncome.toFixed(0)}
+          </Text>
         </View>
-        <View style={[styles.miniCard, { backgroundColor: COLORS.dangerLight }]}>
+        <View
+          style={[styles.miniCard, { backgroundColor: COLORS.dangerLight }]}
+        >
           <View style={[styles.miniIconBg, { backgroundColor: COLORS.danger }]}>
             <Ionicons name="trending-down" size={16} color="#fff" />
           </View>
           <Text style={styles.miniLabel}>Expenses</Text>
-          <Text style={[styles.miniValue, { color: COLORS.danger }]}>-{currencySymbol}{totalExpense.toFixed(0)}</Text>
+          <Text style={[styles.miniValue, { color: COLORS.danger }]}>
+            -{currencySymbol}
+            {totalExpense.toFixed(0)}
+          </Text>
         </View>
       </View>
     </View>
   );
 
-  const renderExpense = (item: Expense & { accountId?: number }, index: number) => {
-    const category = item.category?.[0] || 'Other';
-    const iconName = CATEGORY_ICONS[category] || 'help-circle';
+  const renderExpense = (
+    item: Expense & { accountId?: number },
+    index: number,
+  ) => {
+    const category = item.category?.[0] || "Other";
+    const iconName = CATEGORY_ICONS[category] || "help-circle";
 
     return (
       <TouchableOpacity
@@ -197,11 +301,25 @@ export default function DashboardScreen() {
           <Ionicons name={iconName as any} size={22} color={COLORS.primary} />
         </View>
         <View style={styles.expInfo}>
-          <Text style={styles.expTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.expCat}>{category} • {item.date || 'No date'}</Text>
+          <Text style={styles.expTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.expCat}>
+            {category} •{" "}
+            {item.date
+              ? new Date(item.date).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "No date"}
+          </Text>
         </View>
         <View style={styles.expRight}>
-          <Text style={styles.expAmount}>-{currencySymbol}{item.amount.toFixed(2)}</Text>
+          <Text style={styles.expAmount}>
+            -{currencySymbol}
+            {item.amount.toFixed(2)}
+          </Text>
           <TouchableOpacity
             onPress={() => handleDeleteExpense(item)}
             style={styles.deleteAction}
@@ -231,19 +349,25 @@ export default function DashboardScreen() {
 
         {allExpenses.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={64} color={COLORS.muted} />
+            <Ionicons
+              name="document-text-outline"
+              size={64}
+              color={COLORS.muted}
+            />
             <Text style={styles.emptyText}>No recent transactions found</Text>
           </View>
         ) : (
           <View style={styles.listContainer}>
-            {[...allExpenses].reverse().map((item, index) => renderExpense(item, index))}
+            {[...allExpenses]
+              .reverse()
+              .map((item, index) => renderExpense(item, index))}
           </View>
         )}
       </ScrollView>
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/modal')}
+        onPress={() => router.push("/modal")}
         activeOpacity={0.8}
       >
         <LinearGradient
@@ -262,10 +386,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
+  profileImage: {
+    width: "100%",
+    height: "100%",
+  },
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: COLORS.bg,
   },
   header: {
@@ -274,43 +402,45 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
     marginBottom: 20,
+    gap: 12,
   },
   greetingText: {
     fontSize: 14,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   brandTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   brandTitleText: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.text,
     letterSpacing: -0.5,
+    paddingBottom: 12,
   },
   profileBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...SHADOWS.small,
   },
   profileGradient: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   monthNavRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: COLORS.surface,
     padding: 10,
     borderRadius: SIZES.radiusMedium,
@@ -321,16 +451,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   monthDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   dateText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
   },
   accountSelector: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   accountBadge: {
     paddingHorizontal: 16,
@@ -339,7 +469,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     ...SHADOWS.small,
   },
   accountBadgeActive: {
@@ -349,10 +479,10 @@ const styles = StyleSheet.create({
   accountBadgeText: {
     fontSize: 13,
     color: COLORS.textLight,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   accountBadgeTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   summaryContainer: {
     paddingHorizontal: SIZES.padding,
@@ -364,54 +494,54 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   cardLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1,
   },
   savingsBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   savingsText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cardValue: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 16,
   },
   cardFooter: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: "rgba(255,255,255,0.1)",
     paddingTop: 16,
   },
   footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   footerText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   miniCardsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   miniCard: {
     width: (width - SIZES.padding * 2 - 12) / 2,
@@ -423,43 +553,43 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 10,
   },
   miniLabel: {
     fontSize: 12,
     color: COLORS.textLight,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   miniValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: SIZES.padding,
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
   },
   seeAllText: {
     color: COLORS.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   listContainer: {
     paddingHorizontal: SIZES.padding,
   },
   expenseItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.surface,
     padding: 12,
     borderRadius: SIZES.radiusMedium,
@@ -470,8 +600,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
   expInfo: {
@@ -479,7 +609,7 @@ const styles = StyleSheet.create({
   },
   expTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 2,
   },
@@ -488,21 +618,21 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   expRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   expAmount: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.danger,
   },
   deleteAction: {
     padding: 4,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
   },
   emptyText: {
@@ -511,7 +641,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 30,
     right: 24,
     width: 60,
@@ -522,15 +652,15 @@ const styles = StyleSheet.create({
   fabGradient: {
     flex: 1,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   brandIcon: {
     width: 48,
     height: 48,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
 });
