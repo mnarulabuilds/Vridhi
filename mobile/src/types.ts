@@ -3,7 +3,7 @@ export interface Expense {
   title: string;
   amount: number;
   value: number;
-  date: string;
+  date: Date;
   category: string[];
 }
 
@@ -31,10 +31,12 @@ export interface Account {
   categories: string[];
 }
 
+export type Gender = 'm' | 'f' | 'o';
+
 export interface UserProfile {
   name: string;
-  age: string;
-  gender: string;
+  age: number;
+  gender: Gender;
   kycInfo: string;
   photoUri: string | null;
 }

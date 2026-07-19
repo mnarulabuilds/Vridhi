@@ -7,9 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBudgetData } from '../../src/hooks/useBudgetData';
 import { COLORS, SIZES, SHADOWS } from '../../src/theme';
-import { Account, AccountData, Expense } from '../../src/types';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 
 const { width } = Dimensions.get('window');
 
@@ -273,7 +270,9 @@ export default function SettingsScreen() {
                                 placeholder="0.00"
                                 keyboardType="decimal-pad"
                                 value={incomeInput}
-                                onChangeText={setIncomeInput}
+                                onChangeText={(text) => {
+                                    setIncomeInput(text.replace(/[^0-9.]/g, ''));
+                                }}
                             />
                         </View>
                         <TouchableOpacity style={styles.btnSmall} onPress={handleSetIncome}>
@@ -407,7 +406,7 @@ export default function SettingsScreen() {
                                 <View style={styles.budgetEditRow}>
                                     <Text style={styles.miniCurrency}>{currencySymbol}</Text>
                                     <TextInput 
-                                        style={styles.budgetInputSmall}
+                                        style={styles.budgetInput}
                                         placeholder="0"
                                         keyboardType="decimal-pad"
                                         value={localBudgets[c] || ''}
@@ -813,8 +812,8 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: COLORS.textLight,
     },
-    budgetInputSmall: {
-        width: 60,
+    budgetInput: {
+        width: 120,
         padding: 4,
         backgroundColor: COLORS.surface,
         borderRadius: 8,
