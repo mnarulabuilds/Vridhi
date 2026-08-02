@@ -30,13 +30,24 @@ export interface CreateAccountRequest {
   color?: string;
 }
 
+export interface UpdateAccountRequest {
+  name?: string;
+  type?: AccountType;
+  openingBalance?: number;
+  currency?: string;
+  icon?: string;
+  color?: string;
+}
+
 class AccountsApi {
-  async getAccounts() {
+  async getAccounts(): Promise<Account[]> {
     const response = await api.get<Account[]>('/accounts');
     return response.data;
   }
 
-  async createAccount(payload: CreateAccountRequest) {
+  async createAccount(
+    payload: CreateAccountRequest,
+  ): Promise<Account> {
     const response = await api.post<Account>(
       '/accounts',
       payload,
@@ -47,8 +58,8 @@ class AccountsApi {
 
   async updateAccount(
     id: string,
-    payload: Partial<CreateAccountRequest>,
-  ) {
+    payload: UpdateAccountRequest,
+  ): Promise<Account> {
     const response = await api.patch<Account>(
       `/accounts/${id}`,
       payload,
@@ -57,8 +68,14 @@ class AccountsApi {
     return response.data;
   }
 
-  async archiveAccount(id: string) {
-    await api.delete(`/accounts/${id}`);
+  async archiveAccount(
+    id: string,
+  ): Promise<Account> {
+    const response = await api.delete<Account>(
+      `/accounts/${id}`,
+    );
+
+    return response.data;
   }
 }
 

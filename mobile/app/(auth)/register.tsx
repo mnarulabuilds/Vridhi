@@ -25,17 +25,15 @@ import PrimaryButton from '@/src/components/form/PrimaryButton';
 import { useAuth } from '@/src/providers/auth-provider';
 
 import {
-  loginSchema,
-  LoginForm,
+  registerSchema,
+  RegisterForm,
 } from '@/src/validation/auth.schema';
 
-import {
-  COLORS,
-} from '@/src/theme';
+import { COLORS } from '@/src/theme';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const {
-    login,
+    register,
     loading,
   } = useAuth();
 
@@ -45,28 +43,34 @@ export default function LoginScreen() {
     formState: {
       isSubmitting,
     },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
 
     defaultValues: {
+      name: '',
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
   async function onSubmit(
-    values: LoginForm,
+    values: RegisterForm,
   ) {
     try {
-      await login(values);
+      await register({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
 
       router.replace('/(app)/(tabs)');
     } catch (error: any) {
       Alert.alert(
-        'Login Failed',
+        'Registration Failed',
         error?.response?.data?.message ??
-        error?.message ??
-        'Unable to login.',
+          error?.message ??
+          'Unable to create account.',
       );
     }
   }
@@ -89,36 +93,47 @@ export default function LoginScreen() {
             </View>
 
             <Text style={styles.title}>
-              Welcome Back
+              Create Account
             </Text>
 
             <Text style={styles.subtitle}>
-              Sign in to continue using
-              Vridhi
+              Start your financial journey
             </Text>
           </View>
 
           <View>
             <AppInput
               control={control}
+              name="name"
+              label="Full Name"
+              placeholder="John Doe"
+            />
+
+            <AppInput
+              control={control}
               name="email"
               label="Email"
-              placeholder="Enter email"
-
-              autoCapitalize="none"
-
+              placeholder="john@email.com"
               keyboardType="email-address"
+              autoCapitalize="none"
             />
 
             <PasswordInput
               control={control}
               name="password"
               label="Password"
-              placeholder="Enter password"
+              placeholder="Password"
+            />
+
+            <PasswordInput
+              control={control}
+              name="confirmPassword"
+              label="Confirm Password"
+              placeholder="Confirm Password"
             />
 
             <PrimaryButton
-              title="Sign In"
+              title="Create Account"
               loading={
                 loading || isSubmitting
               }
@@ -128,27 +143,26 @@ export default function LoginScreen() {
             />
 
             <TouchableOpacity
-              style={styles.register}
+              style={styles.loginButton}
               onPress={() =>
-                router.push(
-                  '/(auth)/register',
+                router.replace(
+                  '/(auth)/login',
                 )
               }
             >
               <Text
-                style={
-                  styles.registerText
-                }
+                style={styles.loginText}
               >
-                Don't have an account?
-                Create one
+                Already have an account?
+                {' '}
+                Sign In
               </Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.footer}>
-            Secure authentication
-            powered by Vridhi
+            Secure authentication powered
+            by Vridhi
           </Text>
         </View>
       </ScreenContainer>
@@ -163,77 +177,59 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-
     justifyContent:
       'space-between',
   },
 
   header: {
-    alignItems: 'center',
-
     marginTop: 40,
+    alignItems: 'center',
   },
 
   logo: {
     width: 90,
-
     height: 90,
-
     borderRadius: 24,
-
     justifyContent: 'center',
-
     alignItems: 'center',
-
     backgroundColor:
       COLORS.primaryDark,
-
     marginBottom: 24,
   },
 
   logoText: {
-    color: COLORS.textDark,
-
+    color: COLORS.primaryLight,
     fontWeight: '700',
-
     fontSize: 42,
   },
 
   title: {
-    fontSize: 32,
-
+    color: COLORS.primaryDark,
     fontWeight: '700',
-
-    color: COLORS.primary,
+    fontSize: 32,
   },
 
   subtitle: {
     color:
-      COLORS.primary,
-
+      COLORS.primaryLight,
     marginTop: 10,
-
     fontSize: 15,
   },
 
-  register: {
+  loginButton: {
     marginTop: 20,
-
     alignItems: 'center',
   },
 
-  registerText: {
-    color: COLORS.primaryDark,
-
+  loginText: {
+    color: COLORS.primaryLight,
     fontWeight: '600',
   },
 
   footer: {
-    marginBottom: 20,
-
-    color:
-      COLORS.primaryDark,
-
     textAlign: 'center',
+    color:
+      COLORS.primaryLight,
+    marginBottom: 20,
   },
 });

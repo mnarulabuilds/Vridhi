@@ -1,33 +1,57 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthenticatedUser } from '@/src/types/auth';
 
-const USER_KEY = 'authenticated_user_vridhi';
-
-export interface AuthenticatedUser {
-  id: string;
-  name: string;
-  email: string;
-}
+const USER_KEY = '@vridhi_user';
 
 class UserStorage {
-  async save(user: AuthenticatedUser): Promise<void> {
-    await AsyncStorage.setItem(
-      USER_KEY,
-      JSON.stringify(user),
-    );
-  }
+  async getCurrentUser(): Promise<AuthenticatedUser | null> {
+    try {
+      const value = await AsyncStorage.getItem(USER_KEY);
 
-  async get(): Promise<AuthenticatedUser | null> {
-    const value = await AsyncStorage.getItem(USER_KEY);
+      if (!value) {
+        return null;
+      }
 
-    if (!value) {
+      return JSON.parse(value) as AuthenticatedUser;
+    } catch (error) {
+      console.error(
+        'Failed to read current user',
+        error,
+      );
+
       return null;
     }
+  }
 
-    return JSON.parse(value);
+  async saveCurrentUser(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    try {
+      await AsyncStorage.setItem(
+        USER_KEY,
+        JSON.stringify(user),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to save current user',
+        error,
+      );
+    }
+  }
+
+  async removeCurrentUser(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(USER_KEY);
+    } catch (error) {
+      console.error(
+        'Failed to remove current user',
+        error,
+      );
+    }
   }
 
   async clear(): Promise<void> {
-    await AsyncStorage.removeItem(USER_KEY);
+    await this.removeCurrentUser();
   }
 }
 

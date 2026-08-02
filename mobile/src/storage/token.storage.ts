@@ -1,35 +1,53 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 
-const ACCESS_TOKEN_KEY = 'access_token_vridhi';
+const ACCESS_TOKEN_KEY = '@vridhi_access_token';
 
 class TokenStorage {
   async getAccessToken(): Promise<string | null> {
-    if (Platform.OS === 'web') {
-      return AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+    try {
+      return await AsyncStorage.getItem(
+        ACCESS_TOKEN_KEY,
+      );
+    } catch (error) {
+      console.error(
+        'Failed to read access token',
+        error,
+      );
+      return null;
     }
-
-    return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
   }
 
-  async setAccessToken(token: string): Promise<void> {
-    if (Platform.OS === 'web') {
-      await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
-      return;
+  async saveAccessToken(
+    token: string,
+  ): Promise<void> {
+    try {
+      await AsyncStorage.setItem(
+        ACCESS_TOKEN_KEY,
+        token,
+      );
+    } catch (error) {
+      console.error(
+        'Failed to save access token',
+        error,
+      );
     }
-
-    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token);
-
   }
 
-  async clearAccessToken(): Promise<void> {
-    if (Platform.OS === 'web') {
-      await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
-      return;
+  async removeAccessToken(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(
+        ACCESS_TOKEN_KEY,
+      );
+    } catch (error) {
+      console.error(
+        'Failed to remove access token',
+        error,
+      );
     }
+  }
 
-    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+  async clear(): Promise<void> {
+    await this.removeAccessToken();
   }
 }
 
