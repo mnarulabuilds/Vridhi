@@ -44,9 +44,7 @@ export class AccountsService {
             data: {
                 name: dto.name,
                 type: dto.type,
-                openingBalance: new Prisma.Decimal(
-                    dto.openingBalance,
-                ),
+                openingBalance: dto.openingBalance,
                 currency: dto.currency ?? 'INR',
                 icon: dto.icon,
                 color: dto.color,
