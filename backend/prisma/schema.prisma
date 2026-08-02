@@ -48,6 +48,8 @@ model Account {
 
   userId          String
 
+  transactions Transaction[]
+
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt       DateTime    @default(now())
@@ -57,4 +59,40 @@ model Account {
   @@index([userId])
 
   @@map("accounts")
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+
+  title           String
+
+  amount          Decimal  @db.Decimal(15,2)
+
+  type            TransactionType
+
+  category        String
+
+  notes           String?
+
+  merchant        String?
+
+  transactionDate DateTime
+
+  accountId       String
+
+  account         Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([accountId])
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
 }

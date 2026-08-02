@@ -15,7 +15,7 @@ import {
 import { formatCurrency } from '@/src/utils/currency';
 
 interface Props {
-  totalAssets: number;
+  totalAssets: Record<string, number>;
   accountCount: number;
 }
 
@@ -35,9 +35,11 @@ export default function AccountsSummary({
         TOTAL ASSETS
       </Text>
 
-      <Text style={styles.balance}>
-        {formatCurrency(totalAssets)}
-      </Text>
+      {Object.entries(totalAssets).map(([currency, amount]) => (
+        <Text key={currency} style={styles.subtitle}>
+          {formatCurrency(amount, currency)}
+        </Text>
+      ))}
 
       <Text style={styles.subtitle}>
         {accountCount} Active Accounts
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
 
   label: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
+    fontSize: 28,
     fontWeight: '700',
     letterSpacing: 1,
   },
@@ -71,6 +73,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 10,
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 14,
+    fontSize: 16,
   },
 });

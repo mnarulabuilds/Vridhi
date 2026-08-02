@@ -36,11 +36,15 @@ export default function AccountsScreen() {
     account => !account.isArchived,
   );
 
-  const totalAssets = activeAccounts.reduce(
-    (sum, account) =>
-      sum + Number(account.openingBalance),
-    0,
-  );
+  const totalAssets = activeAccounts.reduce((acc, account) => {
+    const currency = account.currency;
+
+    acc[currency] =
+      (acc[currency] ?? 0) +
+      Number(account.openingBalance);
+
+    return acc;
+  }, {} as Record<string, number>);
 
   if (loading) {
     return (
