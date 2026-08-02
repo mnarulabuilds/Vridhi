@@ -32,6 +32,7 @@ import {
 import {
   COLORS,
 } from '@/src/theme';
+import { confirmAlert } from '@/src/utils/confirmAlert';
 
 export default function LoginScreen() {
   const {
@@ -62,7 +63,7 @@ export default function LoginScreen() {
 
       router.replace('/(app)/(tabs)');
     } catch (error: any) {
-      Alert.alert(
+      confirmAlert(
         'Login Failed',
         error?.response?.data?.message ??
         error?.message ??

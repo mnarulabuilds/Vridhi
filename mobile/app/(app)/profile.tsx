@@ -21,6 +21,7 @@ import { COLORS, SHADOWS } from "@/src/theme";
 import { Gender } from "@/src/types";
 import { Dropdown } from "react-native-element-dropdown";
 import { useBiometrics } from "@/src/providers/biometric-provider";
+import { confirmAlert } from "@/src/utils/confirmAlert";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!validate()) {
-      Alert.alert(
+      confirmAlert(
         "Validation Failed",
         "Please correct the errors in the form.",
       );
@@ -95,10 +96,10 @@ export default function ProfileScreen() {
         kycInfo: kycInfo.trim(),
         photoUri: photoUri,
       });
-      Alert.alert("Success", "Profile updated successfully");
+      confirmAlert("Success", "Profile updated successfully");
       router.back();
     } catch (e) {
-      Alert.alert("Error", "Failed to save profile");
+      confirmAlert("Error", "Failed to save profile");
     } finally {
       setIsSaving(false);
     }
@@ -108,7 +109,7 @@ export default function ProfileScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      Alert.alert(
+      confirmAlert(
         "Permission Denied",
         "Sorry, we need camera roll permissions to make this work!",
       );
@@ -134,7 +135,7 @@ export default function ProfileScreen() {
       // No need for alert here as it resets state
     } else if (value) {
       // If failed to enable, revert or just let the toggle be handled by context
-      Alert.alert("Authentication Failed", "Biometrics could not be verified.");
+      confirmAlert("Authentication Failed", "Biometrics could not be verified.");
     }
   };
 

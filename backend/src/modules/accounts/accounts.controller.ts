@@ -65,7 +65,7 @@ export class AccountsController {
     );
   }
 
-  @Patch(':id')
+  @Patch(':id/archive')
   archive(
     @CurrentUser() user: CurrentUserData,
     @Param('id') id: string,

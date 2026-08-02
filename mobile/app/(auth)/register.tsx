@@ -30,6 +30,7 @@ import {
 } from '@/src/validation/auth.schema';
 
 import { COLORS } from '@/src/theme';
+import { confirmAlert } from '@/src/utils/confirmAlert';
 
 export default function RegisterScreen() {
   const {
@@ -66,7 +67,7 @@ export default function RegisterScreen() {
 
       router.replace('/(app)/(tabs)');
     } catch (error: any) {
-      Alert.alert(
+      confirmAlert(
         'Registration Failed',
         error?.response?.data?.message ??
           error?.message ??
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   },
 
   loginText: {
-    color: COLORS.primaryLight,
+    color: COLORS.primary,
     fontWeight: '600',
   },
 

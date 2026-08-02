@@ -42,6 +42,14 @@ class AccountsService {
   ): Promise<Account> {
     return AccountsApi.archiveAccount(id);
   }
+
+  /**
+   * Fetch an account
+   */
+
+  async fetchAccount(id: string): Promise<Account> {
+    return AccountsApi.fetchAccount(id);
+  }
 }
 
 export default new AccountsService();

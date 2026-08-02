@@ -16,6 +16,7 @@ import {
 import {
   AuthenticatedUser,
 } from '@/src/types/auth';
+import { useRouter } from 'expo-router';
 
 interface AuthContextType {
   user: AuthenticatedUser | null;
@@ -45,6 +46,7 @@ const AuthContext =
 export function AuthProvider({
   children,
 }: React.PropsWithChildren) {
+  const router = useRouter();
   const [user, setUser] =
     useState<AuthenticatedUser | null>(null);
 
@@ -116,6 +118,10 @@ export function AuthProvider({
 
     setAccessToken(null);
     setUser(null);
+
+    router.replace(
+      '/(auth)/login',
+    )
   }
 
   const value = useMemo(

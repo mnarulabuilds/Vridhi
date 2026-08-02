@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { COLORS, SHADOWS } from '@/src/theme';
 import { useBiometrics } from '@/src/providers/biometric-provider';
+import { confirmAlert } from '@/src/utils/confirmAlert';
 
 export default function UnlockScreen() {
   const {
@@ -55,7 +56,7 @@ export default function UnlockScreen() {
         // router.replace('/(tabs)');
       }
     } catch {
-      Alert.alert(
+      confirmAlert(
         'Authentication Failed',
         'Unable to authenticate.'
       );

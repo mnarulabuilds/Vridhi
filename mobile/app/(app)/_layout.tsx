@@ -15,6 +15,12 @@ export default function AppLayout() {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="accounts/create"
+        options={{
+          title: 'Create Account',
+        }}
+      />
     </Stack>
   );
 }

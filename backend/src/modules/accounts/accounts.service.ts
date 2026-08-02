@@ -99,6 +99,8 @@ export class AccountsService {
         accountId: string,
     ) {
 
+        console.log({ userId, accountId}, "archive")
+
         await this.getAccountOrThrow(userId, accountId);
         
         return this.prisma.account.update({

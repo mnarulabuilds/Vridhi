@@ -21,6 +21,8 @@ import {
   SHADOWS,
   SIZES,
 } from '@/src/theme';
+import AccountCard from '@/src/components/accounts/AccountCard';
+import AccountsSummary from '@/src/components/accounts/AccountsSummary';
 
 export default function AccountsScreen() {
   const {
@@ -29,6 +31,16 @@ export default function AccountsScreen() {
     refreshing,
     refetch,
   } = useAccounts();
+
+  const activeAccounts = accounts.filter(
+    account => !account.isArchived,
+  );
+
+  const totalAssets = activeAccounts.reduce(
+    (sum, account) =>
+      sum + Number(account.openingBalance),
+    0,
+  );
 
   if (loading) {
     return (
@@ -55,13 +67,18 @@ export default function AccountsScreen() {
         }
         ListHeaderComponent={() => (
           <>
+            <AccountsSummary
+              totalAssets={totalAssets}
+              accountCount={activeAccounts.length}
+            />
+
             <Text style={styles.title}>
               Accounts
             </Text>
 
             <Text style={styles.subtitle}>
-              Manage your wallets, bank
-              accounts and cards.
+              Manage your bank accounts,
+              wallets and investments.
             </Text>
           </>
         )}
@@ -84,44 +101,17 @@ export default function AccountsScreen() {
           </View>
         )}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={styles.card}
-          >
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name="wallet"
-                size={26}
-                color="#fff"
-              />
-            </View>
-
-            <View style={styles.info}>
-              <Text style={styles.name}>
-                {item.name}
-              </Text>
-
-              <Text style={styles.type}>
-                {item.type.replace('_', ' ')}
-              </Text>
-            </View>
-
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balance}>
-                {item.currency}{' '}
-                {Number(
-                  item.openingBalance,
-                ).toLocaleString()}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <AccountCard
+            account={item}
+            onPress={() => router.push(`/accounts/${item.id}`)}
+          />
         )}
       />
 
       <TouchableOpacity
         style={styles.fab}
         onPress={() =>
-          router.push('/account/create')
+          router.push('/accounts/create')
         }
       >
         <Ionicons

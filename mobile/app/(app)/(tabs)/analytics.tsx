@@ -21,6 +21,7 @@ const chartConfig = {
 import { CATEGORY_ICONS, COLORS, SHADOWS, SIZES } from '@/src/theme';
 import { useBudgetData } from '@/src/hooks/useBudgetData';
 import { AccountData, Expense } from '@/src/types';
+import { confirmAlert } from '@/src/utils/confirmAlert';
 
 export default function AnalyticsScreen() {
     const { state, loading, currentMonth, currencySymbol, actions } = useBudgetData();
@@ -29,7 +30,7 @@ export default function AnalyticsScreen() {
         try {
             const monthInfo = state?.months[currentMonth];
             if (!monthInfo) {
-                Alert.alert("No Data", "There is no data for the current month.");
+                confirmAlert("No Data", "There is no data for the current month.");
                 return;
             }
 
@@ -439,7 +440,7 @@ export default function AnalyticsScreen() {
             const { uri } = await Print.printToFileAsync({ html });
             await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
         } catch (e) {
-            Alert.alert("Error", "Failed to generate dynamic PDF report");
+            confirmAlert("Error", "Failed to generate dynamic PDF report");
             console.error(e);
         }
     };

@@ -71,11 +71,17 @@ class AccountsApi {
   async archiveAccount(
     id: string,
   ): Promise<Account> {
-    const response = await api.delete<Account>(
-      `/accounts/${id}`,
+    const response = await api.patch<Account>(
+      `/accounts/${id}/archive`
     );
 
     return response.data;
+  }
+
+  async fetchAccount(id: string): Promise<Account> {
+      const response = await api.get<Account>(`/accounts/${id}`);
+
+      return response.data;
   }
 }
 
