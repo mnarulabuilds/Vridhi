@@ -6,14 +6,55 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AccountType {
+  CASH
+  SAVINGS
+  CURRENT
+  CREDIT_CARD
+  WALLET
+  INVESTMENT
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
 
+  accounts     Account[]
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@map("users")
+}
+
+model Account {
+  id              String      @id @default(cuid())
+
+  name            String
+
+  type            AccountType
+
+  openingBalance  Decimal     @db.Decimal(15,2)
+
+  currency        String      @default("INR")
+
+  icon            String?
+
+  color           String?
+
+  isArchived      Boolean     @default(false)
+
+  userId          String
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime    @default(now())
+
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+
+  @@map("accounts")
 }
