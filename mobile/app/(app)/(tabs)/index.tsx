@@ -14,10 +14,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useBudgetData } from "../../src/hooks/useBudgetData";
-import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from "../../src/theme";
-import { formatMonthKey } from "../../src/storage";
-import { BudgetState, Expense, AccountData } from "../../src/types";
+import { useBudgetData } from "@/src/hooks/useBudgetData";
+import { formatMonthKey } from "@/src/storage";
+import { AccountData, Expense } from "@/src/types";
+import { CATEGORY_ICONS, COLORS, SHADOWS, SIZES } from "@/src/theme";
 
 const { width } = Dimensions.get("window");
 
@@ -124,7 +124,7 @@ export default function DashboardScreen() {
       </View>
       <View style={styles.brandTitle}>
         <Image
-          source={require(`../../assets/images/vridhi_icon.jpg`)}
+          source={require(`../../../assets/images/vridhi_icon.jpg`)}
           style={styles.brandIcon}
         />
         <Text style={styles.brandTitleText}> Welcome to Vridhi</Text>

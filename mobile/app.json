@@ -47,7 +47,8 @@
           }
         }
       ],
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

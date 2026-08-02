@@ -17,15 +17,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBudgetData } from "@/src/hooks/useBudgetData";
-import { useAuth } from "@/src/hooks/useAuth";
 import { COLORS, SHADOWS } from "@/src/theme";
 import { Gender } from "@/src/types";
 import { Dropdown } from "react-native-element-dropdown";
+import { useBiometrics } from "@/src/providers/biometric-provider";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { state, actions, loading: budgetLoading } = useBudgetData();
-  const { toggleBiometrics, useBiometrics } = useAuth();
+  const { toggleBiometrics, biometrics } = useBiometrics();
 
   const [name, setName] = useState<string>("");
   const [age, setAge] = useState<number>(0);
@@ -292,10 +292,10 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Switch
-              value={useBiometrics}
+              value={biometrics}
               onValueChange={handleToggleBiometrics}
               trackColor={{ false: COLORS.muted, true: COLORS.primaryLight }}
-              thumbColor={useBiometrics ? COLORS.primary : "#f4f3f4"}
+              thumbColor={biometrics ? COLORS.primary : "#f4f3f4"}
             />
           </View>
         </View>

@@ -3,10 +3,10 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 
-const AUTH_CONFIG_KEY = '@budget_app_auth_config';
+const BIOMETRIC_CONFIG_KEY = '@vridhi_biometric__config';
 
-interface AuthContextType {
-  useBiometrics: boolean;
+interface BiometricContextType {
+  biometrics: boolean;
   isUnlocked: boolean;
   loading: boolean;
   authenticateBiometrics: () => Promise<{ success: boolean; error: string | null }>;
@@ -14,10 +14,10 @@ interface AuthContextType {
   setUnlocked: (value: boolean) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const BiometricContext = createContext<BiometricContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [useBiometrics, setUseBiometrics] = useState(false);
+export function BiometricProvider({ children }: { children: React.ReactNode }) {
+  const [biometrics, setBiometrics] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -27,10 +27,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadConfig = async () => {
     try {
-      const stored = await AsyncStorage.getItem(AUTH_CONFIG_KEY);
+      const stored = await AsyncStorage.getItem(BIOMETRIC_CONFIG_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        setUseBiometrics(parsed.useBiometrics);
+        setBiometrics(parsed.useBiometrics);
         // Initially unlocked only if biometrics are NOT required
         setIsUnlocked(!parsed.useBiometrics);
       } else {
@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const saveConfig = async (biometricsValue: boolean) => {
     try {
-      setUseBiometrics(biometricsValue);
-      await AsyncStorage.setItem(AUTH_CONFIG_KEY, JSON.stringify({
+      setBiometrics(biometricsValue);
+      await AsyncStorage.setItem(BIOMETRIC_CONFIG_KEY, JSON.stringify({
         useBiometrics: biometricsValue,
       }));
     } catch (e) {
@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{
-      useBiometrics,
+    <BiometricContext.Provider value={{
+      biometrics,
       isUnlocked,
       loading,
       authenticateBiometrics,
@@ -116,14 +116,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUnlocked: setIsUnlocked,
     }}>
       {children}
-    </AuthContext.Provider>
+    </BiometricContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
+export function useBiometrics() {
+  const context = useContext(BiometricContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useBiometrics must be used within an BiometricProvider');
   }
   return context;
 }

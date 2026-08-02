@@ -1,18 +1,21 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Switch, Dimensions, Modal, ActivityIndicator, Animated, PanResponder } from 'react-native';
-import { useAuth } from '@/src/hooks/useAuth';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Switch, Dimensions, Modal, ActivityIndicator, Animated, PanResponder, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useBudgetData } from '../../src/hooks/useBudgetData';
-import { COLORS, SIZES, SHADOWS } from '../../src/theme';
+import { useBudgetData } from '@/src/hooks/useBudgetData';
+import { COLORS, SIZES, SHADOWS } from '@/src/theme';
+import { useBiometrics } from '@/src/providers/biometric-provider';
+import { useAuth } from '@/src/providers/auth-provider';
+import { Button } from 'react-native-paper';
 
 const { width } = Dimensions.get('window');
 
 export default function SettingsScreen() {
     const { state, actions, currentMonth, currencySymbol } = useBudgetData();
-    const { setUnlocked } = useAuth();
+    const { setUnlocked } = useBiometrics();
+    const { logout } = useAuth();
     const router = useRouter(); // Use useRouter from expo-router
     const [newCategory, setNewCategory] = useState('');
     const [incomeInput, setIncomeInput] = useState('');
@@ -24,7 +27,7 @@ export default function SettingsScreen() {
     const [renamingAccountId, setRenamingAccountId] = useState<number | null>(null);
     const [renamingName, setRenamingName] = useState('');
     const [catAccountId, setCatAccountId] = useState<number | null>(null);
-    const [localBudgets, setLocalBudgets] = useState<{[key: string]: string}>({});
+    const [localBudgets, setLocalBudgets] = useState<{ [key: string]: string }>({});
     const [budgetsModified, setBudgetsModified] = useState(false);
     const [tipAmount, setTipAmount] = useState(50);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -47,7 +50,7 @@ export default function SettingsScreen() {
                 const calculatedTip = Math.round((newValue / sliderWidth) * (maxTip - minTip) + minTip);
                 setTipAmount(calculatedTip);
             },
-            onPanResponderRelease: () => {}
+            onPanResponderRelease: () => { }
         })
     ).current;
 
@@ -75,7 +78,7 @@ export default function SettingsScreen() {
         if (!state || budgetsModified) return;
         const acctId = effectiveCatAccountId;
         const acctBudgets = state.months[currentMonth]?.accounts[String(acctId)]?.categoryBudgets || {};
-        const budgets: {[key: string]: string} = {};
+        const budgets: { [key: string]: string } = {};
         state.accounts.find(a => a.id === acctId)?.categories.forEach(cat => {
             const val = acctBudgets[cat];
             budgets[cat] = (val !== undefined && val !== null) ? String(val) : '';
@@ -96,7 +99,7 @@ export default function SettingsScreen() {
             Alert.alert("Error", "Please enter a category name");
             return;
         }
-        if(selectedAccount) {
+        if (selectedAccount) {
             actions.addCategory(newCategory.trim(), selectedAccount.id);
             setNewCategory('');
         }
@@ -112,23 +115,23 @@ export default function SettingsScreen() {
             Alert.alert("Error", "Please enter a valid positive income amount");
             return;
         }
-        const targetAcctId = incomeAccountId || (state.activeAccountId === 'all' || !state.activeAccountId 
-            ? (state.accounts.find(a => !a.archived) || state.accounts[0])?.id 
+        const targetAcctId = incomeAccountId || (state.activeAccountId === 'all' || !state.activeAccountId
+            ? (state.accounts.find(a => !a.archived) || state.accounts[0])?.id
             : state.activeAccountId as number);
-        
+
         actions.setIncome(amount, targetAcctId);
         Alert.alert("Success", "Income updated");
     };
 
     const handleAddAccount = () => {
-        if(!newAccountName.trim()) {
+        if (!newAccountName.trim()) {
             Alert.alert("Error", "Please enter an account name");
             return;
         }
         const balance = initialBalance ? parseFloat(initialBalance) : 0;
         if (isNaN(balance)) {
-             Alert.alert("Error", "Please enter a valid initial balance");
-             return;
+            Alert.alert("Error", "Please enter a valid initial balance");
+            return;
         }
         actions.addAccount(newAccountName.trim(), newAccountType, balance);
         setNewAccountName('');
@@ -177,7 +180,37 @@ export default function SettingsScreen() {
         Alert.alert("Success", "Budget goals saved");
     };
 
+    const handleLogout = () => {
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(
+                'Are you sure you want to logout?'
+            );
 
+            if (confirmed) {
+                logout();
+            }
+
+            return;
+        }
+
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: () => {
+                        void logout();
+                    },
+                },
+            ],
+        );
+    };
 
     const handleTip = async () => {
         setIsProcessingPayment(true);
@@ -190,7 +223,7 @@ export default function SettingsScreen() {
                 Alert.alert(
                     "Success! ❤️",
                     `Your generous tip of ${currencySymbol}${tipAmount} has been processed. Thank you for supporting Vridhi!`,
-                    [{ text: "You're welcome!", onPress: () => {} }]
+                    [{ text: "You're welcome!", onPress: () => { } }]
                 );
             }, 1500);
         }, 3000);
@@ -202,8 +235,8 @@ export default function SettingsScreen() {
             `This will delete all income and expenses for ${currentMonth}. Are you sure?`,
             [
                 { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Reset", 
+                {
+                    text: "Reset",
                     style: "destructive",
                     onPress: () => {
                         actions.resetMonth();
@@ -219,8 +252,8 @@ export default function SettingsScreen() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Settings</Text>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         onPress={() => router.push('/profile')}
                         activeOpacity={0.9}
                     >
@@ -253,8 +286,8 @@ export default function SettingsScreen() {
                     <Text style={styles.helperText}>Select account to update monthly income:</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.accountSelector}>
                         {state.accounts.filter(a => !a.archived).map(acct => (
-                            <TouchableOpacity 
-                                key={acct.id} 
+                            <TouchableOpacity
+                                key={acct.id}
                                 style={[styles.accountPill, effectiveIncomeAccountId === acct.id && styles.accountPillActive]}
                                 onPress={() => setIncomeAccountId(acct.id)}
                             >
@@ -265,7 +298,7 @@ export default function SettingsScreen() {
                     <View style={styles.inputGroup}>
                         <View style={styles.inputWithIcon}>
                             <Text style={styles.currencyPrefix}>{currencySymbol}</Text>
-                            <TextInput 
+                            <TextInput
                                 style={styles.input}
                                 placeholder="0.00"
                                 keyboardType="decimal-pad"
@@ -290,7 +323,7 @@ export default function SettingsScreen() {
                     <Text style={styles.helperText}>Base Currency</Text>
                     <View style={styles.pillsContainer}>
                         {currencies.map(c => (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 key={c}
                                 style={[styles.pill, state?.currency === c && styles.pillActive]}
                                 onPress={() => actions.setCurrency(c)}
@@ -308,7 +341,7 @@ export default function SettingsScreen() {
                         <Text style={styles.sectionTitle}>Accounts</Text>
                     </View>
                     <View style={styles.addAccountBox}>
-                        <TextInput 
+                        <TextInput
                             style={styles.inputFull}
                             placeholder="Account Name (e.g. HDFC, Cash)"
                             value={newAccountName}
@@ -316,7 +349,7 @@ export default function SettingsScreen() {
                         />
                         <View style={styles.pillsContainerSmall}>
                             {accountTypes.map(type => (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     key={type}
                                     style={[styles.miniPill, newAccountType === type && styles.miniPillActive]}
                                     onPress={() => setNewAccountType(type)}
@@ -338,7 +371,7 @@ export default function SettingsScreen() {
                                 <View style={{ flex: 1 }}>
                                     {renamingAccountId === acct.id ? (
                                         <View style={styles.renameGroup}>
-                                            <TextInput 
+                                            <TextInput
                                                 style={styles.renameInput}
                                                 value={renamingName}
                                                 onChangeText={setRenamingName}
@@ -376,8 +409,8 @@ export default function SettingsScreen() {
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.accountSelector}>
                         {state.accounts.filter(a => !a.archived).map(acct => (
-                            <TouchableOpacity 
-                                key={acct.id} 
+                            <TouchableOpacity
+                                key={acct.id}
                                 style={[styles.accountPill, effectiveCatAccountId === acct.id && styles.accountPillActive]}
                                 onPress={() => setCatAccountId(acct.id)}
                             >
@@ -386,7 +419,7 @@ export default function SettingsScreen() {
                         ))}
                     </ScrollView>
                     <View style={styles.inputGroup}>
-                        <TextInput 
+                        <TextInput
                             style={[styles.input, { flex: 1 }]}
                             placeholder="New category name"
                             value={newCategory}
@@ -405,7 +438,7 @@ export default function SettingsScreen() {
                                 <Text style={styles.catRowText}>{c}</Text>
                                 <View style={styles.budgetEditRow}>
                                     <Text style={styles.miniCurrency}>{currencySymbol}</Text>
-                                    <TextInput 
+                                    <TextInput
                                         style={styles.budgetInput}
                                         placeholder="0"
                                         keyboardType="decimal-pad"
@@ -456,7 +489,7 @@ export default function SettingsScreen() {
                             <Text style={styles.tipJarTitle}>Support Vridhi</Text>
                         </View>
                         <Text style={styles.tipJarDesc}>Move the slider to choose your tip amount. Your support helps us keep the app free!</Text>
-                        
+
                         <View style={styles.tipAmountContainer}>
                             <Text style={styles.tipAmountLabel}>Amount</Text>
                             <Text style={styles.tipAmountValue}>{currencySymbol}{tipAmount}</Text>
@@ -464,12 +497,12 @@ export default function SettingsScreen() {
 
                         <View style={styles.sliderContainer}>
                             <View style={styles.sliderTrack} />
-                            <Animated.View 
-                                style={[styles.sliderTrackActive, { width: pan }]} 
+                            <Animated.View
+                                style={[styles.sliderTrackActive, { width: pan }]}
                             />
-                            <Animated.View 
+                            <Animated.View
                                 {...panResponder.panHandlers}
-                                style={[styles.sliderThumb, { transform: [{ translateX: pan }] }]} 
+                                style={[styles.sliderThumb, { transform: [{ translateX: pan }] }]}
                             />
                         </View>
                         <View style={styles.sliderLabels}>
@@ -477,7 +510,7 @@ export default function SettingsScreen() {
                             <Text style={styles.sliderLabelText}>{currencySymbol}1000</Text>
                         </View>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.payBtn}
                             onPress={handleTip}
                             disabled={isProcessingPayment}
@@ -486,6 +519,16 @@ export default function SettingsScreen() {
                             <Text style={styles.payBtnText}>Complete Secure Payment</Text>
                         </TouchableOpacity>
                     </LinearGradient>
+                </View>
+
+                <View style={styles.section}>
+                    <Button
+                        mode="contained"
+                        onPress={handleLogout}
+                        icon="logout"
+                    >
+                        Logout
+                    </Button>
                 </View>
 
                 {/* Simulated Payment Modal */}

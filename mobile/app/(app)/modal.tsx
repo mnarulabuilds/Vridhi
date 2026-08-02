@@ -13,11 +13,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useBudgetData } from "../src/hooks/useBudgetData";
-import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from "../src/theme";
+import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from "@/src/theme";
 const { width } = Dimensions.get("window");
 import { Button } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
+import { useBudgetData } from "@/src/hooks/useBudgetData";
 
 
 export default function ModalScreen() {

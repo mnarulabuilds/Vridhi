@@ -7,12 +7,8 @@ import { PieChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useBudgetData } from '../../src/hooks/useBudgetData';
-import { COLORS, SIZES, SHADOWS, CATEGORY_ICONS } from '../../src/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-
 
 const chartConfig = {
   backgroundGradientFrom: COLORS.surface,
@@ -22,7 +18,9 @@ const chartConfig = {
   strokeWidth: 2,
 };
 
-import { Expense, AccountData } from '../../src/types';
+import { CATEGORY_ICONS, COLORS, SHADOWS, SIZES } from '@/src/theme';
+import { useBudgetData } from '@/src/hooks/useBudgetData';
+import { AccountData, Expense } from '@/src/types';
 
 export default function AnalyticsScreen() {
     const { state, loading, currentMonth, currencySymbol, actions } = useBudgetData();
