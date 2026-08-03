@@ -51,7 +51,7 @@ export default function AppInput<
 
           <TextInput
             {...textInputProps}
-            value={value?.toString() ?? ''}
+            value={value ?? ''}
             onBlur={onBlur}
             onChangeText={onChange}
             style={[

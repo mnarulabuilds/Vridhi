@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 
 import {
-  Controller,
   useForm,
 } from 'react-hook-form';
 
@@ -103,154 +102,68 @@ export default function TransactionForm({
 
   return (
     <View style={styles.container}>
-      <Controller
+
+      <AppInput
+        label="Title"
         control={control}
         name="title"
-        render={({
-          field,
-          fieldState,
-        }) => (
-          <AppInput
-            label="Title"
-            value={field.value}
-            onChangeText={
-              field.onChange
-            }
-            error={
-              fieldState.error
-                ?.message
-            }
-          />
-        )}
       />
 
-      <Controller
+
+      <AppInput
+        label="Amount"
+        keyboardType="decimal-pad"
         control={control}
         name="amount"
-        render={({
-          field,
-          fieldState,
-        }) => (
-          <AppInput
-            label="Amount"
-            keyboardType="decimal-pad"
-            value={
-              field.value?.toString() ??
-              ''
-            }
-            onChangeText={text =>
-              field.onChange(
-                Number(text),
-              )
-            }
-            error={
-              fieldState.error
-                ?.message
-            }
-          />
-        )}
       />
 
-      <Controller
+      <AppSelect
+        label="Type"
+        data={
+          TRANSACTION_TYPES
+        }
         control={control}
         name="type"
-        render={({ field }) => (
-          <AppSelect
-            label="Type"
-            value={field.value}
-            onValueChange={
-              field.onChange
-            }
-            options={
-              TRANSACTION_TYPES
-            }
-          />
-        )}
       />
 
-      <Controller
+      <AppSelect
+        label="Category"
         control={control}
         name="category"
-        render={({
-          field,
-          fieldState,
-        }) => (
-          <AppSelect
-            label="Category"
-            value={field.value}
-            onValueChange={
-              field.onChange
-            }
-            options={
-              categoryOptions
-            }
-            error={
-              fieldState.error
-                ?.message
-            }
-          />
-        )}
+        data={
+          categoryOptions
+        }
       />
 
-      <Controller
+
+      <AppSelect
+        label="Account"
         control={control}
         name="accountId"
-        render={({
-          field,
-          fieldState,
-        }) => (
-          <AppSelect
-            label="Account"
-            value={field.value}
-            onValueChange={
-              field.onChange
-            }
-            options={accounts.map(
-              account => ({
-                label:
-                  account.name,
-                value:
-                  account.id,
-              }),
-            )}
-            error={
-              fieldState.error
-                ?.message
-            }
-          />
+        data={accounts.map(
+          account => ({
+            label:
+              account.name,
+            value:
+              account.id,
+          }),
         )}
       />
 
-      <Controller
+
+      <AppInput
+        label="Merchant"
         control={control}
         name="merchant"
-        render={({
-          field,
-        }) => (
-          <AppInput
-            label="Merchant"
-            value={field.value}
-            onChangeText={
-              field.onChange
-            }
-          />
-        )}
       />
 
-      <Controller
+
+      <AppInput
+        label="Notes"
+        multiline
+        numberOfLines={4}
         control={control}
         name="notes"
-        render={({ field }) => (
-          <AppInput
-            label="Notes"
-            multiline
-            numberOfLines={4}
-            value={field.value}
-            onChangeText={
-              field.onChange
-            }
-          />
-        )}
       />
 
       <PrimaryButton

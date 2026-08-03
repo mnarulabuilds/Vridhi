@@ -84,7 +84,7 @@ export default function RegisterScreen() {
       ]}
       style={styles.background}
     >
-      <ScreenContainer>
+      <ScreenContainer scrollable>
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.logo}>

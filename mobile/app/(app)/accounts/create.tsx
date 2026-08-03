@@ -34,7 +34,7 @@ export default function CreateAccountScreen() {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer scrollable>
       <AccountForm
         submitText="Create Account"
         onSubmit={onSubmit}

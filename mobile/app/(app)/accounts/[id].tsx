@@ -83,7 +83,7 @@ export default function UpdateAccountScreen() {
     }
 
     return (
-        <ScreenContainer>
+        <ScreenContainer scrollable>
             <AccountForm
                 defaultValues={account}
                 submitText="Save Changes"

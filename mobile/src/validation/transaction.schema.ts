@@ -6,7 +6,7 @@ export const transactionSchema = z.object({
     .trim()
     .min(1, 'Title is required.'),
 
-  amount: z
+  amount: z.coerce
     .number()
     .positive('Amount must be greater than zero.'),
 

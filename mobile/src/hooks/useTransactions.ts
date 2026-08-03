@@ -45,17 +45,17 @@ export function useTransactions() {
       payload,
     }: {
       id: string;
-
       payload: UpdateTransactionRequest;
     }) =>
-      TransactionsService.update(
-        id,
-        payload,
-      ),
+      TransactionsService.update(id, payload),
 
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEY,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['transaction', variables.id],
       });
 
       queryClient.invalidateQueries({
@@ -68,9 +68,13 @@ export function useTransactions() {
     mutationFn: (id: string) =>
       TransactionsService.remove(id),
 
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEY,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['transaction', id],
       });
 
       queryClient.invalidateQueries({

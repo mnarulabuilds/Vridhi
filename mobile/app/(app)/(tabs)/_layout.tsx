@@ -60,6 +60,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="transactions"
+        options={{
+          title: 'Transactions',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="swap-horizontal"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',

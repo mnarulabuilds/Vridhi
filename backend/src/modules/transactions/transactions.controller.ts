@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 import { type CurrentUserData } from 'src/common/interfaces/current-user.interface';
 
-@Controller('transactions')
+@Controller('/api/v1/transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(

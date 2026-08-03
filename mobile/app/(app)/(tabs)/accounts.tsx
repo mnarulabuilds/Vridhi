@@ -23,6 +23,7 @@ import {
 } from '@/src/theme';
 import AccountCard from '@/src/components/accounts/AccountCard';
 import AccountsSummary from '@/src/components/accounts/AccountsSummary';
+import ScreenContainer from '@/src/components/ScreenContainer';
 
 export default function AccountsScreen() {
   const {
@@ -58,7 +59,7 @@ export default function AccountsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer scrollable>
       <FlatList
         data={accounts}
         keyExtractor={(item) => item.id}
@@ -124,7 +125,7 @@ export default function AccountsScreen() {
           color="#fff"
         />
       </TouchableOpacity>
-    </View>
+    </ScreenContainer>
   );
 }
 
