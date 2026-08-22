@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,6 +22,8 @@ export default function UnlockScreen() {
     setUnlocked,
   } = useBiometrics();
 
+  const attempted = useRef(false);
+
   useEffect(() => {
     if (loading) {
       return;
@@ -33,16 +34,13 @@ export default function UnlockScreen() {
       return;
     }
 
-    if (isUnlocked) {
+    if (isUnlocked || attempted.current) {
       return;
     }
 
+    attempted.current = true;
     void unlock();
-  }, [
-    loading,
-    biometrics,
-    isUnlocked,
-  ]);
+  }, [loading, biometrics, isUnlocked]);
 
   async function unlock() {
     try {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import { Alert, AppState, InteractionManager, Platform } from 'react-native';
 
 const BIOMETRIC_CONFIG_KEY = '@vridhi_biometric__config';
 
@@ -16,29 +16,69 @@ interface BiometricContextType {
 
 const BiometricContext = createContext<BiometricContextType | undefined>(undefined);
 
+function waitForActiveApp() {
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      InteractionManager.runAfterInteractions(() => {
+        setTimeout(resolve, Platform.OS === 'android' ? 450 : 50);
+      });
+    };
+
+    if (AppState.currentState === 'active') {
+      finish();
+      return;
+    }
+
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        sub.remove();
+        finish();
+      }
+    });
+
+    setTimeout(() => {
+      sub.remove();
+      finish();
+    }, 2000);
+  });
+}
+
 export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const [biometrics, setBiometrics] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadConfig();
+    void loadConfig();
   }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background' && biometrics) {
+        setIsUnlocked(false);
+      }
+    });
+    return () => sub.remove();
+  }, [biometrics]);
 
   const loadConfig = async () => {
     try {
       const stored = await AsyncStorage.getItem(BIOMETRIC_CONFIG_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        setBiometrics(parsed.useBiometrics);
-        // Initially unlocked only if biometrics are NOT required
+        setBiometrics(Boolean(parsed.useBiometrics));
         setIsUnlocked(!parsed.useBiometrics);
       } else {
-          // Default: no biometrics, app is unlocked
-          setIsUnlocked(true);
+        setIsUnlocked(true);
       }
     } catch (e) {
       console.error('Failed to load auth config', e);
+      setIsUnlocked(true);
     } finally {
       setLoading(false);
     }
@@ -47,9 +87,10 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const saveConfig = async (biometricsValue: boolean) => {
     try {
       setBiometrics(biometricsValue);
-      await AsyncStorage.setItem(BIOMETRIC_CONFIG_KEY, JSON.stringify({
-        useBiometrics: biometricsValue,
-      }));
+      await AsyncStorage.setItem(
+        BIOMETRIC_CONFIG_KEY,
+        JSON.stringify({ useBiometrics: biometricsValue }),
+      );
     } catch (e) {
       console.error('Failed to save auth config', e);
     }
@@ -57,37 +98,49 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
 
   const authenticateBiometrics = async () => {
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      await waitForActiveApp();
 
-      if (!hasHardware) {
-        Alert.alert('Not Supported', 'Your device does not support biometric authentication.');
-        return { success: false, error: 'Hardware not available' };
-      }
-
-      if (!isEnrolled) {
-          // On many devices, calling authenticateAsync will still show the system prompt 
-          // and allow the user to use their device passcode even if face/finger is not enrolled.
+      const enrolledLevel = await LocalAuthentication.getEnrolledLevelAsync();
+      if (enrolledLevel === LocalAuthentication.SecurityLevel.NONE) {
+        Alert.alert(
+          'Screen lock required',
+          'Add a PIN, pattern, password, or biometrics in your device settings, then try again.',
+        );
+        return { success: false, error: 'not_enrolled' };
       }
 
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Unlock Vridhi',
-        fallbackLabel: 'Use Passcode',
-        disableDeviceFallback: false,
+        fallbackLabel: 'Use passcode',
         cancelLabel: 'Cancel',
+        disableDeviceFallback: false,
+        requireConfirmation: false,
       });
 
       if (result.success) {
         setIsUnlocked(true);
-      } else if (result.error && result.error !== 'user_cancel' && result.error !== 'app_cancel' && result.error !== 'user_fallback') {
-          Alert.alert('Authentication Failed', `Error: ${result.error}. please ensure biometrics are set up in your device settings.`);
+        return { success: true, error: null };
       }
 
-      return { success: result.success, error: result.success ? null : (result.error || 'Authentication failed') };
+      const cancelled =
+        result.error === 'user_cancel' ||
+        result.error === 'app_cancel' ||
+        result.error === 'system_cancel' ||
+        result.error === 'user_fallback';
+      if (!cancelled && result.error) {
+        Alert.alert(
+          'Authentication failed',
+          'Use your fingerprint, face unlock, or device PIN. If this keeps failing, check that a screen lock is enabled in system settings.',
+        );
+      }
+
+      return {
+        success: false,
+        error: result.error || 'Authentication failed',
+      };
     } catch (e) {
       console.error('Biometric error:', e);
-      Alert.alert('Error', 'An unexpected error occurred during authentication.');
+      Alert.alert('Error', 'Could not start biometric unlock. Try again, or use your device PIN.');
       return { success: false, error: 'An error occurred' };
     }
   };
@@ -100,21 +153,23 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
       return false;
-    } else {
-      await saveConfig(false);
-      return true;
     }
+    await saveConfig(false);
+    setIsUnlocked(true);
+    return true;
   };
 
   return (
-    <BiometricContext.Provider value={{
-      biometrics,
-      isUnlocked,
-      loading,
-      authenticateBiometrics,
-      toggleBiometrics,
-      setUnlocked: setIsUnlocked,
-    }}>
+    <BiometricContext.Provider
+      value={{
+        biometrics,
+        isUnlocked,
+        loading,
+        authenticateBiometrics,
+        toggleBiometrics,
+        setUnlocked: setIsUnlocked,
+      }}
+    >
       {children}
     </BiometricContext.Provider>
   );
