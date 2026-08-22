@@ -6,7 +6,7 @@ import {
 
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class TransactionsService {
@@ -43,6 +43,7 @@ export class TransactionsService {
                 type: dto.type,
                 category: dto.category,
                 notes: dto.notes,
+                merchant: dto.merchant,
                 transactionDate: new Date(
                     dto.transactionDate,
                 ),
@@ -103,6 +104,20 @@ export class TransactionsService {
         dto: UpdateTransactionDto,
     ) {
         await this.findOne(userId, id);
+
+        if (dto.accountId) {
+            const account = await this.prisma.account.findFirst({
+                where: {
+                    id: dto.accountId,
+                    userId,
+                    isArchived: false,
+                },
+            });
+
+            if (!account) {
+                throw new NotFoundException('Account not found.');
+            }
+        }
 
         return this.prisma.transaction.update({
             where: {

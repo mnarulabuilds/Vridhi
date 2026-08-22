@@ -8,6 +8,7 @@ import {
 
 import {
   Controller,
+  Resolver,
   useForm,
 } from 'react-hook-form';
 
@@ -55,7 +56,7 @@ export default function AccountForm({
       isSubmitting,
     },
   } = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
+    resolver: zodResolver(accountSchema) as Resolver<AccountFormValues>,
 
     defaultValues: {
       name: '',

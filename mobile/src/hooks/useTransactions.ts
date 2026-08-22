@@ -36,6 +36,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({
         queryKey: ['accounts'],
       });
+
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     },
   });
 
@@ -61,6 +63,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({
         queryKey: ['accounts'],
       });
+
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     },
   });
 
@@ -80,6 +84,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({
         queryKey: ['accounts'],
       });
+
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     },
   });
 

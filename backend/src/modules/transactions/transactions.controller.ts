@@ -14,8 +14,8 @@ import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from 'src/common/decorator/current-user.decorator';
-import { type CurrentUserData } from 'src/common/interfaces/current-user.interface';
+import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { type CurrentUserData } from '../../common/interfaces/current-user.interface';
 
 @Controller('/api/v1/transactions')
 @UseGuards(JwtAuthGuard)

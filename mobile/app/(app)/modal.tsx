@@ -175,7 +175,7 @@ export default function ModalScreen() {
         <View style={styles.section}>
           {/* Description */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>What's it for?</Text>
+            <Text style={styles.fieldLabel}>What’s it for?</Text>
             <View style={styles.inputWrapper}>
               <Ionicons
                 name="create-outline"

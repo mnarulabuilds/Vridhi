@@ -141,7 +141,7 @@ export default function LoginScreen() {
                   styles.registerText
                 }
               >
-                Don't have an account?
+                Don’t have an account?
                 Create one
               </Text>
             </TouchableOpacity>

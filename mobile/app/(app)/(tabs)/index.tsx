@@ -18,12 +18,24 @@ import { useBudgetData } from "@/src/hooks/useBudgetData";
 import { formatMonthKey } from "@/src/storage";
 import { AccountData, Expense } from "@/src/types";
 import { CATEGORY_ICONS, COLORS, SHADOWS, SIZES } from "@/src/theme";
+import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
+import { useTransactions } from '@/src/hooks/useTransactions';
+import TransactionCard from '@/src/components/transactions/TransactionCard';
 
 const { width } = Dimensions.get("window");
 
 export default function DashboardScreen() {
   const { state, loading, currentMonth, currencySymbol, actions } =
     useBudgetData();
+
+  const [year, month] = currentMonth.split('-').map(Number);
+  const periodFrom = new Date(year, month - 1, 1).toISOString();
+  const periodTo = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+  const { data: serverSummary } = useFinancialSummary(
+    periodFrom,
+    periodTo,
+  );
+  const { transactions: serverTransactions } = useTransactions();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -56,6 +68,11 @@ export default function DashboardScreen() {
       allExpenses.push({ ...exp, accountId: id });
     });
   });
+
+  if (serverSummary) {
+    totalIncome = serverSummary.income;
+    totalExpense = serverSummary.expenses;
+  }
 
   const balance = totalIncome - totalExpense;
   const savingsRate =
@@ -347,7 +364,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {allExpenses.length === 0 ? (
+        {serverTransactions.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons
               name="document-text-outline"
@@ -358,9 +375,13 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <View style={styles.listContainer}>
-            {[...allExpenses]
-              .reverse()
-              .map((item, index) => renderExpense(item, index))}
+            {serverTransactions.slice(0, 5).map((transaction) => (
+              <TransactionCard
+                key={transaction.id}
+                transaction={transaction}
+                onPress={() => router.push(`/transactions/${transaction.id}`)}
+              />
+            ))}
           </View>
         )}
       </ScrollView>

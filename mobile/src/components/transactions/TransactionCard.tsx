@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   merchant: {
     marginTop: 3,
 
-    color: COLORS.textLight,
+    color: COLORS.textDark,
   },
 
   date: {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
 
     fontSize: 12,
 
-    color: COLORS.textDark,
+    color: COLORS.textLight,
   },
 
   right: {
@@ -257,6 +257,6 @@ const styles = StyleSheet.create({
 
     fontWeight: '600',
 
-    color: COLORS.textLight,
+    color: COLORS.textDark,
   },
 });

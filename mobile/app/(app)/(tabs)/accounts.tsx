@@ -39,10 +39,13 @@ export default function AccountsScreen() {
 
   const totalAssets = activeAccounts.reduce((acc, account) => {
     const currency = account.currency;
+    const balance = Number(
+      account.currentBalance ?? account.openingBalance ?? 0,
+    );
 
     acc[currency] =
       (acc[currency] ?? 0) +
-      Number(account.openingBalance);
+      (Number.isFinite(balance) ? balance : 0);
 
     return acc;
   }, {} as Record<string, number>);

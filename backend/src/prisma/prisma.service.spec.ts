@@ -1,18 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from './prisma.service';
 
 describe('PrismaService', () => {
-  let service: PrismaService;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [PrismaService],
-    }).compile();
-
-    service = module.get<PrismaService>(PrismaService);
-  });
-
   it('should be defined', () => {
+    const service = new PrismaService({
+      getOrThrow: jest.fn().mockReturnValue('postgresql://unused'),
+    } as any);
     expect(service).toBeDefined();
   });
 });

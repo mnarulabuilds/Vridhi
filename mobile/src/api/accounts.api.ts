@@ -13,6 +13,8 @@ export interface Account {
   name: string;
   type: AccountType;
   openingBalance: number;
+  /** Present on the current API; optional for compatibility with an older server. */
+  currentBalance?: number;
   currency: string;
   icon?: string | null;
   color?: string | null;

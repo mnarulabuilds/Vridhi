@@ -7,6 +7,7 @@ import {
 
 import {
   useForm,
+  Resolver,
 } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -65,7 +66,7 @@ export default function TransactionForm({
     setValue,
   } = useForm<TransactionFormValues>({
     resolver:
-      zodResolver(transactionSchema),
+      zodResolver(transactionSchema) as Resolver<TransactionFormValues>,
 
     defaultValues: {
       title: '',

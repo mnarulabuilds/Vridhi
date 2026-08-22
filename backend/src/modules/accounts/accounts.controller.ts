@@ -17,7 +17,7 @@ import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 
 import type { CurrentUserData } from '../../common/interfaces/current-user.interface';
-import { CurrentUser } from 'src/common/decorator/current-user.decorator';
+import { CurrentUser } from '../../common/decorator/current-user.decorator';
 
 @Controller('api/v1/accounts')
 @UseGuards(JwtAuthGuard)

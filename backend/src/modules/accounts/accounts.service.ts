@@ -1,5 +1,4 @@
 import {
-    ForbiddenException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -16,6 +15,26 @@ export class AccountsService {
     constructor(
         private readonly prisma: PrismaService,
     ) { }
+
+    private withCurrentBalance(account: any) {
+        const transactionTotal = (account.transactions ?? []).reduce(
+            (total: number, transaction: { amount: unknown; type: string }) => {
+                const amount = Number(transaction.amount);
+
+                return transaction.type === 'INCOME'
+                    ? total + amount
+                    : total - amount;
+            },
+            0,
+        );
+
+        const { transactions, ...accountData } = account;
+
+        return {
+            ...accountData,
+            currentBalance: Number(account.openingBalance) + transactionTotal,
+        };
+    }
 
     private async getAccountOrThrow(
         userId: string,
@@ -40,7 +59,7 @@ export class AccountsService {
         userId: string,
         dto: CreateAccountDto,
     ) {
-        return this.prisma.account.create({
+        const account = await this.prisma.account.create({
             data: {
                 name: dto.name,
                 type: dto.type,
@@ -51,10 +70,12 @@ export class AccountsService {
                 userId,
             },
         });
+
+        return this.findOne(userId, account.id);
     }
 
     async findAll(userId: string) {
-        return this.prisma.account.findMany({
+        const accounts = await this.prisma.account.findMany({
             where: {
                 userId,
                 isArchived: false,
@@ -63,20 +84,39 @@ export class AccountsService {
             orderBy: {
                 createdAt: 'desc',
             },
+
+            include: {
+                transactions: {
+                    select: {
+                        amount: true,
+                        type: true,
+                    },
+                },
+            },
         });
+
+        return accounts.map(account => this.withCurrentBalance(account));
     }
 
     async findOne(
         userId: string,
         accountId: string,
     ) {
-        const account = await this.getAccountOrThrow(userId, accountId);            
+        await this.getAccountOrThrow(userId, accountId);
 
-        if (account.userId !== userId) {
-            throw new ForbiddenException();
-        }
+        const account = await this.prisma.account.findUniqueOrThrow({
+            where: { id: accountId },
+            include: {
+                transactions: {
+                    select: {
+                        amount: true,
+                        type: true,
+                    },
+                },
+            },
+        });
 
-        return account;
+        return this.withCurrentBalance(account);
     }
 
     async update(
@@ -86,20 +126,20 @@ export class AccountsService {
     ) {
         await this.getAccountOrThrow(userId, accountId);
 
-        return this.prisma.account.update({
+        await this.prisma.account.update({
             where: {
                 id: accountId,
             },
             data: dto,
         });
+
+        return this.findOne(userId, accountId);
     }
 
     async archive(
         userId: string,
         accountId: string,
     ) {
-
-        console.log({ userId, accountId}, "archive")
 
         await this.getAccountOrThrow(userId, accountId);
         

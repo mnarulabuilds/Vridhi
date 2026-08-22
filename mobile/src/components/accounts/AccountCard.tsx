@@ -43,6 +43,10 @@ export default function AccountCard({
     account.color ??
     COLORS.primaryDark;
 
+  const currentBalance = Number(
+    account.currentBalance ?? account.openingBalance ?? 0,
+  );
+
   return (
     <TouchableOpacity
       activeOpacity={0.92}
@@ -109,7 +113,9 @@ export default function AccountCard({
           <Text style={styles.balance}>
             {formatCurrency(
               Number(
-                account.openingBalance,
+                Number.isFinite(currentBalance)
+                  ? currentBalance
+                  : 0,
               ),
               account.currency,
             )}

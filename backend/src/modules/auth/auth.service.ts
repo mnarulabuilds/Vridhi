@@ -15,6 +15,28 @@ export class AuthService {
         private readonly jwtService: JwtService,
     ) { }
 
+    private async createAuthResponse(user: {
+        id: string;
+        name: string;
+        email: string;
+    }) {
+        const payload: JwtPayload = {
+            sub: user.id,
+            email: user.email,
+        };
+
+        const accessToken = await this.jwtService.signAsync(payload);
+
+        return {
+            accessToken,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            },
+        };
+    }
+
     async register(dto: RegisterDto) {
 
         const existingUser =
@@ -37,7 +59,7 @@ export class AuthService {
             passwordHash,
         });
 
-        return user;
+        return this.createAuthResponse(user);
     }
 
     async login(dto: LoginDto) {
@@ -56,20 +78,20 @@ export class AuthService {
             throw new UnauthorizedException("Invalid email or password");
         }
 
-        const payload: JwtPayload = {
-            sub: user.id,
-            email: user.email,
-        };
+        return this.createAuthResponse(user);
+    }
 
-        const accessToken = await this.jwtService.signAsync(payload);
+    async getProfile(userId: string) {
+        const user = await this.usersService.findById(userId);
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
 
         return {
-            accessToken,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-            },
+            id: user.id,
+            name: user.name,
+            email: user.email,
         };
     }
 
