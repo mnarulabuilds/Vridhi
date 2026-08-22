@@ -63,11 +63,19 @@ export default function LoginScreen() {
 
       router.replace('/(app)/(tabs)');
     } catch (error: any) {
+      const apiUrl =
+        process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
+      const unreachable =
+        !error?.response &&
+        (error?.message === 'Network Error' ||
+          error?.code === 'ERR_NETWORK');
       confirmAlert(
         'Login Failed',
-        error?.response?.data?.message ??
-        error?.message ??
-        'Unable to login.',
+        unreachable
+          ? `Cannot reach the API at ${apiUrl}. Join the same Wi-Fi as the computer running Vridhi, and keep that machine awake.`
+          : (error?.response?.data?.message ??
+            error?.message ??
+            'Unable to login.'),
       );
     }
   }

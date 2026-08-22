@@ -14,7 +14,9 @@ MOBILE_PROFILE="${MOBILE_PROFILE:-preview}"
 SKIP_BUILD=0
 NO_TLS=0
 FORCE=0
+WAIT_EAS=0
 API_URL_OVERRIDE="${EXPO_PUBLIC_API_URL:-}"
+ENV_FILE=""
 
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
@@ -35,11 +37,11 @@ usage() {
 Deploy Vridhi with one command.
 
 Usage:
-  npm run deploy                  API + Android preview build
-  npm run deploy:api              API only (Docker Compose)
-  npm run deploy:mobile           Mobile only (EAS)
-  npm run deploy -- init          Create .env.production with random secrets
-  npm run deploy -- status        Show API container and health status
+  npm run deploy                  API only (Docker Compose)
+  npm run deploy:mobile           Android preview APK (EAS, does not wait)
+  npm run deploy:all              API, then submit an EAS mobile build
+  npm run deploy:init             Create .env.production with random secrets
+  npm run deploy:status           Show API container and health status
 
   ./scripts/deploy.sh [command] [options]
 
@@ -58,8 +60,12 @@ Options:
   --api-url URL          Public API URL baked into the mobile build
   --skip-build           Recreate containers without rebuilding images
   --no-tls               Do not start Caddy even if API_DOMAIN is set
+  --wait               Wait for the EAS build to finish (slow)
   --force                Build mobile even if the API URL is localhost
   -h, --help
+
+  npm swallows --profile. Use: npm run deploy:mobile -- --profile production
+  or: npm run deploy:mobile production
 
 Environment:
   .env.production at the repo root (or backend/.env.production) supplies
@@ -67,7 +73,7 @@ Environment:
   Caddy. Set EXPO_PUBLIC_API_URL (or pass --api-url) for the mobile build.
   DEPLOY_HOST / DEPLOY_PATH work the same as --host / --path.
 
-  npm run deploy skips the mobile build until a public API URL is set.
+  npm run deploy skips the mobile build. Use npm run deploy:mobile or deploy:all.
 EOF
 }
 
@@ -76,7 +82,7 @@ require_cmd() {
 }
 
 env_get() {
-  local key="$1" file="${2:-$ENV_FILE}"
+  local key="$1" file="${2:-${ENV_FILE:-}}"
   [[ -f "$file" ]] || return 0
   local line val
   line="$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1 || true)"
@@ -245,10 +251,9 @@ deploy_api_local() {
   local port
   port="$(env_get PORT)"
   port="${port:-3001}"
-  docker rm -f vridhi-api >/dev/null 2>&1 || true
   local holders
   holders="$(port_in_use "$port")"
-  if [[ -n "$holders" ]]; then
+  if [[ -n "$holders" ]] && ! echo "$holders" | grep -qiE 'docke|com\.docker'; then
     die "Port ${port} is already in use. Stop that process, then retry. (lsof -nP -iTCP:${port} -sTCP:LISTEN)"
   fi
   compose_args
@@ -273,6 +278,7 @@ deploy_api_local() {
     if [[ -n "$lan" ]]; then
       ok "On this LAN: http://${lan}:${port}"
     fi
+    log "Android APK: npm run deploy:mobile  (phone must be on this Wi-Fi)"
   fi
 }
 
@@ -359,10 +365,25 @@ cmd_mobile() {
     if ! npx --yes eas-cli whoami >/dev/null 2>&1; then
       die "Not logged in to Expo. Run: cd mobile && npx eas-cli login"
     fi
-    EXPO_PUBLIC_API_URL="$api_url" npx --yes eas-cli build \
-      --profile "$MOBILE_PROFILE" \
-      --platform "$MOBILE_PLATFORM" \
-      --non-interactive
+    EXPO_PUBLIC_API_URL="$api_url" MOBILE_PROFILE="$MOBILE_PROFILE" node <<'NODE'
+const fs = require('fs');
+const url = process.env.EXPO_PUBLIC_API_URL;
+const profile = process.env.MOBILE_PROFILE || 'preview';
+const file = 'eas.json';
+const eas = JSON.parse(fs.readFileSync(file, 'utf8'));
+if (!eas.build || !eas.build[profile]) {
+  throw new Error('Unknown EAS profile: ' + profile);
+}
+eas.build[profile].env = Object.assign({}, eas.build[profile].env, {
+  EXPO_PUBLIC_API_URL: url,
+});
+fs.writeFileSync(file, JSON.stringify(eas, null, 2) + '\n');
+NODE
+    eas_args=(build --profile "$MOBILE_PROFILE" --platform "$MOBILE_PLATFORM" --non-interactive)
+    if [[ "$WAIT_EAS" -eq 0 ]]; then
+      eas_args+=(--no-wait)
+    fi
+    EXPO_PUBLIC_API_URL="$api_url" npx --yes eas-cli "${eas_args[@]}"
   )
   ok "EAS build submitted. Install from the Expo URL when it finishes."
 }
@@ -392,6 +413,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     all | api | mobile | init | status)
       TARGET="$1"
+      shift
+      ;;
+    preview | production | development)
+      MOBILE_PROFILE="$1"
+      shift
+      ;;
+    --wait)
+      WAIT_EAS=1
       shift
       ;;
     --host)
@@ -433,27 +462,37 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      die "Unknown argument: $1 (try --help)"
+      die "Unknown argument: $1 (try --help). If you meant an EAS profile, use: npm run deploy:mobile -- --profile $1"
       ;;
   esac
 done
+
+use_lan_api_url_if_needed() {
+  find_env_file
+  if [[ -n "$(public_api_url)" || -n "$DEPLOY_HOST" ]]; then
+    return 0
+  fi
+  local lan port
+  lan="$(detect_lan_ip)"
+  port="$(env_get PORT)"
+  port="${port:-3001}"
+  if [[ -n "$lan" ]]; then
+    API_URL_OVERRIDE="http://${lan}:${port}"
+    warn "No EXPO_PUBLIC_API_URL set; using ${API_URL_OVERRIDE} for the mobile build (same Wi-Fi)."
+  fi
+}
 
 case "$TARGET" in
   init) cmd_init ;;
   status) cmd_status ;;
   api) cmd_api ;;
-  mobile) cmd_mobile ;;
+  mobile)
+    use_lan_api_url_if_needed
+    cmd_mobile
+    ;;
   all)
     cmd_api
-    if [[ -z "$(public_api_url)" && -z "$DEPLOY_HOST" ]]; then
-      lan="$(detect_lan_ip)"
-      port="$(env_get PORT)"
-      port="${port:-3001}"
-      if [[ -n "$lan" ]]; then
-        API_URL_OVERRIDE="http://${lan}:${port}"
-        warn "No EXPO_PUBLIC_API_URL set; using ${API_URL_OVERRIDE} for the mobile build (same Wi-Fi)."
-      fi
-    fi
+    use_lan_api_url_if_needed
     if [[ -z "$(public_api_url)" ]]; then
       warn "Skipping mobile: set EXPO_PUBLIC_API_URL or API_DOMAIN (or pass --api-url)."
     elif ! ( cmd_mobile ); then

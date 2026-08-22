@@ -2,9 +2,10 @@
   "name": "vridhi",
   "private": true,
   "scripts": {
-    "deploy": "./scripts/deploy.sh",
+    "deploy": "./scripts/deploy.sh api",
     "deploy:api": "./scripts/deploy.sh api",
     "deploy:mobile": "./scripts/deploy.sh mobile",
+    "deploy:all": "./scripts/deploy.sh all",
     "deploy:init": "./scripts/deploy.sh init",
     "deploy:status": "./scripts/deploy.sh status"
   }

@@ -34,7 +34,8 @@ The API is a Docker image plus Postgres. The mobile app is an Expo/EAS build tha
 npm run deploy:init          # once: writes .env.production with random secrets
 # Edit .env.production: API_DOMAIN, EXPO_PUBLIC_API_URL, optional OPENAI_API_KEY
 (cd mobile && npx eas-cli login) # once: Expo account for EAS builds
-npm run deploy               # API (Docker) + Android preview build
+npm run deploy               # API (Docker)
+npm run deploy:mobile        # Android preview APK
 ```
 
 Useful variants:
@@ -43,7 +44,7 @@ Useful variants:
 npm run deploy:api           # backend only, this machine
 npm run deploy:mobile        # EAS only
 npm run deploy:status        # compose ps + GET /health
-npm run deploy -- api --host user@your-server
+npm run deploy:all           # API, then submit an EAS mobile build
 npm run deploy -- mobile --platform ios --profile production
 ```
 
@@ -51,7 +52,7 @@ Set `API_DOMAIN=api.your-domain.com` (DNS A record pointing at the host) to star
 
 `EXPO_PUBLIC_API_URL` is baked into the native binary. Native apps do not need CORS; add web origins to `CORS_ORIGINS` only if you ship Expo web.
 
-`npm run deploy` starts the API, then an Android preview EAS build if `EXPO_PUBLIC_API_URL` or `API_DOMAIN` is set. Otherwise it skips mobile and prints what to set.
+`npm run deploy` starts the API. `npm run deploy:mobile` submits an Android preview APK that talks to this machine’s LAN IP. `npm run deploy:all` does both.
 
 Do not run `gemma4:26b` (or other 20B+ models) on the API host. Structured Ask questions work without a model; open chat can use `OPENAI_API_KEY`. If Ollama runs on the host, set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` (not `127.0.0.1`).
 
