@@ -19,12 +19,22 @@
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://vridhi-8hjg.onrender.com"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": true,
+        "serviceAccountKeyPath": "./google-play-service-account.json"
+      }
+    }
   }
 }

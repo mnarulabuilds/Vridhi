@@ -43,11 +43,21 @@ brew install render && render login
 npm run deploy               # trigger a Render deploy of the API
 npm run deploy:status        # GET https://your-service.onrender.com/health
 npm run deploy:mobile        # Android APK against that URL
+npm run deploy:play          # production AAB → Play Console (internal draft)
 ```
 
 Local Docker (this machine only): `npm run deploy:api:local`
 
 `DATABASE_URL` on Render must be the Postgres **Internal Database URL**, never `localhost`. See `render.yaml` for a Blueprint that wires this automatically.
+
+### Play Store
+
+1. Create a [Play Console](https://play.google.com/console) app with package `com.vridhi.app`.
+2. Fill the store listing, privacy policy, Data safety form, and content rating. Upload a 512×512 PNG icon.
+3. Create a Google Cloud service account with Play Developer API access, download the JSON key, save it as `mobile/google-play-service-account.json` (gitignored), and set `PLAY_SERVICE_ACCOUNT_JSON` in `.env.production` if the path differs.
+4. Run `npm run deploy:play`. That builds an **AAB** (not the preview APK), with HTTP cleartext disabled, and uploads it as an **internal draft**. Complete the listing, add testers, then promote.
+
+Without the JSON key the AAB is still built; upload it in Play Console or run `npm run deploy:play -- --submit-only` after the key is in place. Build only: `npm run deploy:play -- --no-submit`.
 
 
 

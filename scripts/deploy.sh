@@ -14,6 +14,8 @@ SKIP_BUILD=0
 NO_TLS=0
 FORCE=0
 WAIT_EAS=0
+SUBMIT_ONLY=0
+SKIP_SUBMIT=0
 LOCAL_API=0
 LAN_PROXY_PORT="${LAN_PROXY_PORT:-8787}"
 API_URL_OVERRIDE="${EXPO_PUBLIC_API_URL:-}"
@@ -41,6 +43,7 @@ Deploy Vridhi.
 Usage:
   npm run deploy                  Backend on Render
   npm run deploy:mobile           Android APK (EAS) using the Render API URL
+  npm run deploy:play             Production AAB + upload to Play Console (internal draft)
   npm run deploy:status           GET /health on the Render URL
   npm run deploy:init             Create .env.production if missing
 
@@ -49,6 +52,7 @@ Usage:
 Commands:
   api       Deploy the backend (Render by default)
   mobile    Build the Expo app against EXPO_PUBLIC_API_URL
+  play      Production Android App Bundle and submit to Play (internal track, draft)
   status    Health-check the public API
   init      Write .env.production if it is missing
 
@@ -59,6 +63,8 @@ Options:
   --profile preview|production|development
   --api-url URL          Override EXPO_PUBLIC_API_URL for this mobile build
   --wait                 Wait for the EAS build to finish
+  --no-submit            Build the Play AAB but do not upload it
+  --submit-only          Upload the latest production AAB (skip the EAS build)
   --force                Allow a localhost API URL in a mobile build
   -h, --help
 
@@ -70,7 +76,8 @@ Options:
   web service by name, slug, or API_DOMAIN.
 
   Then separately:
-    npm run deploy:mobile
+    npm run deploy:mobile          # sideload APK
+    npm run deploy:play            # Play Store AAB (needs a Play Console app + service account)
 EOF
 }
 
@@ -443,6 +450,49 @@ cmd_api() {
   fi
 }
 
+play_service_account_path() {
+  find_env_file
+  local from_env
+  from_env="$(env_get PLAY_SERVICE_ACCOUNT_JSON)"
+  if [[ -n "$from_env" ]]; then
+    if [[ "$from_env" != /* ]]; then
+      from_env="$ROOT/$from_env"
+    fi
+    if [[ -f "$from_env" ]]; then
+      printf '%s' "$from_env"
+      return 0
+    fi
+  fi
+  local candidate
+  for candidate in \
+    "$ROOT/mobile/google-play-service-account.json" \
+    "$ROOT/google-play-service-account.json"
+  do
+    if [[ -f "$candidate" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  printf ''
+}
+
+require_https_api() {
+  local api_url="$1"
+  if [[ "$api_url" != https://* ]]; then
+    die "Play Store / production builds need an https EXPO_PUBLIC_API_URL (got ${api_url})."
+  fi
+  if [[ "$api_url" == *localhost* || "$api_url" == *127.0.0.1* ]]; then
+    die "Play Store builds cannot use ${api_url}. Use the Render HTTPS URL."
+  fi
+}
+
+eas_login_or_die() {
+  cd "$ROOT/mobile"
+  if ! npx --yes eas-cli whoami >/dev/null 2>&1; then
+    die "Not logged in to Expo. Run: cd mobile && npx eas-cli login"
+  fi
+}
+
 cmd_mobile() {
   find_env_file
   require_cmd npx "Install Node.js 22+."
@@ -451,7 +501,9 @@ cmd_mobile() {
   if [[ -z "$api_url" ]]; then
     die "Set EXPO_PUBLIC_API_URL in .env.production to your Render URL (https://your-service.onrender.com)"
   fi
-  if [[ "$api_url" == *localhost* || "$api_url" == *127.0.0.1* ]]; then
+  if [[ "$MOBILE_PROFILE" == "production" ]]; then
+    require_https_api "$api_url"
+  elif [[ "$api_url" == *localhost* || "$api_url" == *127.0.0.1* ]]; then
     if [[ "$FORCE" -eq 0 ]]; then
       die "Mobile builds cannot reach ${api_url} from a phone. Use the Render HTTPS URL."
     fi
@@ -461,10 +513,7 @@ cmd_mobile() {
   log "${BOLD}Building mobile (${MOBILE_PROFILE} / ${MOBILE_PLATFORM})${RESET}"
   log "EXPO_PUBLIC_API_URL=${api_url}"
   (
-    cd "$ROOT/mobile"
-    if ! npx --yes eas-cli whoami >/dev/null 2>&1; then
-      die "Not logged in to Expo. Run: cd mobile && npx eas-cli login"
-    fi
+    eas_login_or_die
     eas_args=(build --profile "$MOBILE_PROFILE" --platform "$MOBILE_PLATFORM" --non-interactive)
     if [[ "$WAIT_EAS" -eq 0 ]]; then
       eas_args+=(--no-wait)
@@ -472,6 +521,77 @@ cmd_mobile() {
     EXPO_PUBLIC_API_URL="$api_url" npx --yes eas-cli "${eas_args[@]}"
   )
   ok "EAS build submitted. Install from the Expo URL when it finishes."
+}
+
+write_play_service_account_path() {
+  local key="$1"
+  PLAY_KEY="$key" node <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const key = process.env.PLAY_KEY;
+const file = path.join('mobile', 'eas.json');
+const eas = JSON.parse(fs.readFileSync(file, 'utf8'));
+let rel = path.relative(path.join(process.cwd(), 'mobile'), key);
+if (!rel.startsWith('.')) {
+  rel = './' + rel;
+}
+eas.submit = eas.submit || {};
+eas.submit.production = eas.submit.production || {};
+eas.submit.production.android = Object.assign({}, eas.submit.production.android || {}, {
+  serviceAccountKeyPath: rel,
+});
+fs.writeFileSync(file, JSON.stringify(eas, null, 2) + '\n');
+NODE
+}
+
+cmd_submit_play() {
+  find_env_file
+  require_cmd npx "Install Node.js 22+."
+  local key
+  key="$(play_service_account_path)"
+  [[ -n "$key" ]] || die "Missing Play service account JSON. Download it from Play Console → Users and permissions → API access, save as mobile/google-play-service-account.json (gitignored), or set PLAY_SERVICE_ACCOUNT_JSON in .env.production."
+  write_play_service_account_path "$key"
+  (
+    eas_login_or_die
+    log "${BOLD}Submitting latest production AAB to Play Console (internal / draft)${RESET}"
+    npx --yes eas-cli submit --platform android --profile production --latest --non-interactive
+  )
+  ok "Uploaded as an internal draft. Finish the store listing in Play Console, then promote the release."
+}
+
+cmd_play() {
+  MOBILE_PROFILE="production"
+  MOBILE_PLATFORM="android"
+  WAIT_EAS=1
+  if [[ "$SUBMIT_ONLY" -eq 1 ]]; then
+    cmd_submit_play
+    return 0
+  fi
+  find_env_file
+  require_cmd npx "Install Node.js 22+."
+  local api_url key
+  api_url="$(public_api_url)"
+  [[ -n "$api_url" ]] || die "Set EXPO_PUBLIC_API_URL in .env.production to your Render URL."
+  require_https_api "$api_url"
+  write_mobile_api_url "$api_url"
+  key="$(play_service_account_path)"
+  log "${BOLD}Building Play Store AAB (production / android)${RESET}"
+  log "EXPO_PUBLIC_API_URL=${api_url}"
+  (
+    eas_login_or_die
+    eas_args=(build --profile production --platform android --non-interactive --wait)
+    EXPO_PUBLIC_API_URL="$api_url" npx --yes eas-cli "${eas_args[@]}"
+  )
+  if [[ "$SKIP_SUBMIT" -eq 1 ]]; then
+    ok "AAB built. Download it from Expo and upload it in Play Console, or run: npm run deploy:play -- --submit-only"
+    return 0
+  fi
+  if [[ -z "$key" ]]; then
+    warn "AAB built, but Play submit was skipped (no service account JSON)."
+    warn "Create the app in Play Console (package com.vridhi.app), then either upload the AAB there or save mobile/google-play-service-account.json and run: npm run deploy:play -- --submit-only"
+    return 0
+  fi
+  cmd_submit_play
 }
 
 cmd_status() {
@@ -493,7 +613,7 @@ cmd_status() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    all | api | mobile | init | status)
+    all | api | mobile | play | init | status)
       TARGET="$1"
       shift
       ;;
@@ -507,6 +627,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --wait)
       WAIT_EAS=1
+      shift
+      ;;
+    --no-submit)
+      SKIP_SUBMIT=1
+      shift
+      ;;
+    --submit-only)
+      SUBMIT_ONLY=1
       shift
       ;;
     --host)
@@ -558,6 +686,7 @@ case "$TARGET" in
   status) cmd_status ;;
   api) cmd_api ;;
   mobile) cmd_mobile ;;
+  play) cmd_play ;;
   all)
     cmd_api
     log "Backend done. Run npm run deploy:mobile separately to build the APK."

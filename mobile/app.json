@@ -25,7 +25,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.vridhi.app",
       "versionCode": 2,
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -63,7 +63,7 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": false
           }
         }
       ]

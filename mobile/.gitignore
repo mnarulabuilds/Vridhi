@@ -17,6 +17,8 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+google-play-service-account.json
+pc-api-*.json
 
 # Metro
 .metro-health-check*
