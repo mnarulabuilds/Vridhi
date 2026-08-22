@@ -15,6 +15,7 @@ SKIP_BUILD=0
 NO_TLS=0
 FORCE=0
 WAIT_EAS=0
+LAN_PROXY_PORT="${LAN_PROXY_PORT:-8787}"
 API_URL_OVERRIDE="${EXPO_PUBLIC_API_URL:-}"
 ENV_FILE=""
 
@@ -180,6 +181,28 @@ detect_lan_ip() {
   ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
 }
 
+start_lan_proxy() {
+  local target_port="${1:-3001}"
+  local pidfile="$ROOT/.lan-proxy.pid"
+  if [[ -f "$pidfile" ]]; then
+    local oldpid
+    oldpid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [[ -n "$oldpid" ]] && kill -0 "$oldpid" 2>/dev/null; then
+      ok "LAN proxy already running on port ${LAN_PROXY_PORT}"
+      return 0
+    fi
+  fi
+  VRIDHI_PROXY_TARGET="$target_port" VRIDHI_PROXY_PORT="$LAN_PROXY_PORT" \
+    nohup node "$ROOT/scripts/lan-proxy.js" >/tmp/vridhi-lan-proxy.log 2>&1 &
+  echo $! >"$pidfile"
+  sleep 0.4
+  if curl -sf "http://127.0.0.1:${LAN_PROXY_PORT}/health" >/dev/null; then
+    ok "LAN proxy on port ${LAN_PROXY_PORT} -> ${target_port}"
+  else
+    warn "LAN proxy started but /health did not respond yet. See /tmp/vridhi-lan-proxy.log"
+  fi
+}
+
 cmd_init() {
   find_env_file
   if [[ -n "$ENV_FILE" ]]; then
@@ -275,8 +298,9 @@ deploy_api_local() {
   else
     lan="$(detect_lan_ip)"
     ok "API listening on port ${port} (http://127.0.0.1:${port}/health)"
+    start_lan_proxy "$port"
     if [[ -n "$lan" ]]; then
-      ok "On this LAN: http://${lan}:${port}"
+      ok "Phone URL: http://${lan}:${LAN_PROXY_PORT}"
     fi
     log "Android APK: npm run deploy:mobile  (phone must be on this Wi-Fi)"
   fi
@@ -477,7 +501,7 @@ use_lan_api_url_if_needed() {
   port="$(env_get PORT)"
   port="${port:-3001}"
   if [[ -n "$lan" ]]; then
-    API_URL_OVERRIDE="http://${lan}:${port}"
+    API_URL_OVERRIDE="http://${lan}:${LAN_PROXY_PORT}"
     warn "No EXPO_PUBLIC_API_URL set; using ${API_URL_OVERRIDE} for the mobile build (same Wi-Fi)."
   fi
 }
@@ -487,6 +511,10 @@ case "$TARGET" in
   status) cmd_status ;;
   api) cmd_api ;;
   mobile)
+    find_env_file
+    port="$(env_get PORT)"
+    port="${port:-3001}"
+    start_lan_proxy "$port"
     use_lan_api_url_if_needed
     cmd_mobile
     ;;

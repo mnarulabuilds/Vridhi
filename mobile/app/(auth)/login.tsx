@@ -167,8 +167,7 @@ export default function LoginScreen() {
           </View>
 
           <Text style={styles.footer}>
-            Secure authentication
-            powered by Vridhi
+            API {process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001'}
           </Text>
         </View>
       </ScreenContainer>
