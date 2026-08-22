@@ -19,6 +19,8 @@ import { useAuth } from '@/src/providers/auth-provider';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
 import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds, shiftMonth } from '@/src/utils/month';
+import { useInsights } from '@/src/hooks/useInsights';
+import InsightNoticeCard from '@/src/components/insights/InsightNoticeCard';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -30,6 +32,8 @@ export default function DashboardScreen() {
     to: bounds.to,
     limit: 8,
   });
+  const { data: insights } = useInsights(bounds.from);
+  const notices = (insights?.notices ?? []).filter((notice) => notice.kind !== 'info').slice(0, 2);
   const { accounts } = useAccounts();
 
   const income = summary?.income ?? 0;
@@ -79,6 +83,20 @@ export default function DashboardScreen() {
           <Stat label="Expenses" value={formatCurrency(expenses)} color={COLORS.danger} />
           <Stat label="Saved" value={`${savingsRate}%`} color={COLORS.primary} />
         </View>
+
+        {notices.length > 0 ? (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>Worth a look</Text>
+              <TouchableOpacity onPress={() => router.push('/(app)/(tabs)/analytics')}>
+                <Text style={styles.link}>Insights</Text>
+              </TouchableOpacity>
+            </View>
+            {notices.map((notice) => (
+              <InsightNoticeCard key={notice.title} notice={notice} />
+            ))}
+          </>
+        ) : null}
 
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Recent transactions</Text>

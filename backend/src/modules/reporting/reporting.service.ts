@@ -1,6 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { cashFlow, currentBalance, savingsRate } from '../../common/money/ledger';
+import {
+  buildNotices,
+  cashFlowByMonth,
+  detectRecurring,
+  detectUnusualCategories,
+  monthKey,
+  type LedgerTxn,
+} from '../../common/money/insights';
 
 @Injectable()
 export class ReportingService {
@@ -97,6 +105,50 @@ export class ReportingService {
       spendingByCategory: byCategory,
       budgetVsActual,
       balances,
+    };
+  }
+
+  async insights(userId: string, asOf?: string) {
+    const focus = asOf ? new Date(asOf) : new Date();
+    if (Number.isNaN(focus.valueOf())) {
+      throw new BadRequestException('Provide a valid asOf date');
+    }
+    const windowStart = new Date(focus.getFullYear(), focus.getMonth() - 11, 1);
+    const windowEnd = new Date(focus.getFullYear(), focus.getMonth() + 1, 0, 23, 59, 59, 999);
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        account: { userId },
+        transactionDate: { gte: windowStart, lte: windowEnd },
+      },
+      select: {
+        title: true,
+        merchant: true,
+        amount: true,
+        type: true,
+        transactionDate: true,
+        category: { select: { name: true } },
+      },
+    });
+    const transactions: LedgerTxn[] = rows.map((row) => ({
+      title: row.title,
+      merchant: row.merchant,
+      amount: Number(row.amount),
+      type: row.type,
+      categoryName: row.category?.name ?? null,
+      transactionDate: row.transactionDate,
+    }));
+    const focusMonth = monthKey(focus);
+    const recurring = detectRecurring(transactions);
+    const unusual = detectUnusualCategories(transactions, focusMonth);
+    const savingsRateByMonth = cashFlowByMonth(transactions);
+    const notices = buildNotices({ focusMonth, recurring, unusual, savingsRateByMonth });
+    return {
+      asOf: focus,
+      focusMonth,
+      notices,
+      recurring,
+      unusualCategories: unusual,
+      savingsRateByMonth,
     };
   }
 }

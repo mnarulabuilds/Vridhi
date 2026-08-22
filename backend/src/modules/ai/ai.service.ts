@@ -17,7 +17,8 @@ Rules:
 - Do not give investment, tax, or legal advice. You may explain recorded numbers and budgets.
 - Transfers are not income or expenses.
 - Prefer concise answers with INR formatting (e.g. ₹1,250.00).
-- Mention the date range you used when summarizing.`;
+- Mention the date range you used when summarizing.
+- When the user asks what changed, what is unusual, or what bills repeat, call get_insights.`
 
 const TOOLS = [
   {
@@ -71,6 +72,20 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_insights',
+      description:
+        'Pattern notices: recurring bills, unusual category spend vs recent months, and savings-rate trend. Pass asOf as an ISO date in the month the user is asking about.',
+      parameters: {
+        type: 'object',
+        properties: {
+          asOf: { type: 'string', description: 'ISO date in the focus month' },
+        },
+      },
+    },
+  },
 ];
 
 @Injectable()
@@ -110,6 +125,8 @@ export class AiService {
         return this.accounts.findAll(userId);
       case 'list_budgets':
         return this.budgets.findForPeriod(userId, new Date(String(args.periodStart ?? fallback.from)));
+      case 'get_insights':
+        return this.reporting.insights(userId, args.asOf ? String(args.asOf) : undefined);
       default:
         return { error: `Unknown tool ${name}` };
     }

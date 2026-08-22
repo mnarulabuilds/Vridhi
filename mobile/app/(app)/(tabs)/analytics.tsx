@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PieChart } from 'react-native-chart-kit';
 import { COLORS, SIZES } from '@/src/theme';
 import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
+import { useInsights } from '@/src/hooks/useInsights';
+import InsightNoticeCard from '@/src/components/insights/InsightNoticeCard';
 import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds, shiftMonth } from '@/src/utils/month';
 import { TouchableOpacity } from 'react-native';
@@ -23,6 +25,7 @@ export default function AnalyticsScreen() {
   const [month, setMonth] = useState(() => new Date());
   const bounds = monthBounds(month);
   const { data, isLoading } = useFinancialSummary(bounds.from, bounds.to);
+  const { data: insights } = useInsights(bounds.from);
 
   const pie = useMemo(() => {
     const entries = Object.entries(data?.spendingByCategory ?? {});
@@ -54,6 +57,33 @@ export default function AnalyticsScreen() {
             <Text style={styles.metric}>
               Spent {formatCurrency(data?.expenses ?? 0)} of {formatCurrency(data?.income ?? 0)} income
             </Text>
+            {(insights?.notices ?? []).map((notice) => (
+              <InsightNoticeCard key={`${notice.kind}-${notice.title}`} notice={notice} />
+            ))}
+            {(insights?.savingsRateByMonth ?? []).length > 1 ? (
+              <>
+                <Text style={styles.section}>Savings rate</Text>
+                <View style={styles.spark}>
+                  {insights?.savingsRateByMonth.map((row) => {
+                    const height = Math.max(6, Math.min(64, Math.abs(row.savingsRate) * 64));
+                    return (
+                      <View key={row.month} style={styles.sparkCol}>
+                        <View
+                          style={[
+                            styles.sparkBar,
+                            {
+                              height,
+                              backgroundColor: row.savingsRate >= 0.2 ? COLORS.success : COLORS.warning,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.sparkLabel}>{row.month.slice(5)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
             {pie.length > 0 ? (
               <PieChart
                 data={pie}
@@ -121,4 +151,8 @@ const styles = StyleSheet.create({
   budgetAmt: { color: COLORS.textLight, fontSize: 12 },
   bar: { height: 8, backgroundColor: COLORS.primaryLight, borderRadius: 8, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 8 },
+  spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 84, marginBottom: 16 },
+  sparkCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  sparkBar: { width: '70%', borderRadius: 4, minHeight: 6 },
+  sparkLabel: { fontSize: 9, color: COLORS.textLight, marginTop: 4 },
 });

@@ -119,7 +119,7 @@ export default function AskScreen() {
         <ScrollView contentContainerStyle={styles.thread}>
           {messages.length === 0 ? (
             <Text style={styles.empty}>
-              Ask about this month's spending, savings rate, budgets, or account balances. Answers use your recorded data.
+              Ask about this month's spending, a bill that repeats, or whether dining looks unusually high. Answers use your recorded data.
             </Text>
           ) : (
             messages.map((message, index) => (
