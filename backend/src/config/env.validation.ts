@@ -5,6 +5,11 @@ export function validateEnv(config: Record<string, unknown>) {
       throw new Error(`Missing required environment variable: ${key}`);
     }
   }
+  const nodeEnv = String(config.NODE_ENV ?? 'development');
+  const jwtSecret = String(config.JWT_SECRET);
+  if (nodeEnv === 'production' && (jwtSecret.length < 32 || /replace-with|change-me/i.test(jwtSecret))) {
+    throw new Error('JWT_SECRET must be a long random value in production');
+  }
   return {
     ...config,
     PORT: config.PORT ?? 3001,

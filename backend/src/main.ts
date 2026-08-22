@@ -23,27 +23,23 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const isProd = process.env.NODE_ENV === 'production';
-  if (isProd && origins.length === 0) {
-    throw new Error('CORS_ORIGINS must be set in production');
-  }
   app.enableCors({
-    origin: origins.length
-      ? origins
-      : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:8082'],
+    origin: origins.length ? origins : false,
     credentials: true,
   });
 
-  const swagger = new DocumentBuilder()
-    .setTitle('Vridhi API')
-    .setDescription('Personal finance API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
+  if (process.env.NODE_ENV !== 'production') {
+    const swagger = new DocumentBuilder()
+      .setTitle('Vridhi API')
+      .setDescription('Personal finance API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
+  }
 
   const port = Number(process.env.PORT ?? 3001);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`Listening on ${port}`);
 }
 bootstrap();
