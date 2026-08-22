@@ -6,7 +6,7 @@ services:
     environment:
       NODE_ENV: production
     ports:
-      - "127.0.0.1:${PORT:-3001}:3001"
+      - "${API_BIND:-0.0.0.0}:${PORT:-3001}:3001"
 
   caddy:
     profiles: ["tls"]
@@ -28,5 +28,7 @@ services:
         condition: service_healthy
 
 volumes:
+  postgres_data:
+    name: vridhi_postgres_prod
   caddy_data:
   caddy_config:

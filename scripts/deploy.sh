@@ -128,20 +128,30 @@ prepare_compose_env() {
     printf '\nDATABASE_URL=postgresql://%s:%s@postgres:5432/%s?schema=public\n' \
       "$(urlencode "$user")" "$(urlencode "$password")" "$(urlencode "$db")" >>"$COMPOSE_ENV_FILE"
   fi
+  local domain bind
+  domain="$(normalize_domain "$(env_get API_DOMAIN)")"
+  if [[ -n "$domain" && "$NO_TLS" -eq 0 ]]; then
+    bind="127.0.0.1"
+  else
+    bind="0.0.0.0"
+  fi
+  printf 'API_BIND=%s\n' "$bind" >>"$COMPOSE_ENV_FILE"
 }
 
 compose_args() {
-  local domain profile_args=()
+  local domain
   domain="$(normalize_domain "$(env_get API_DOMAIN)")"
-  if [[ -n "$domain" && "$NO_TLS" -eq 0 ]]; then
-    profile_args=(--profile tls)
-  fi
   prepare_compose_env
-  COMPOSE_CMD=("${COMPOSE[@]}" "${profile_args[@]}" --env-file "$COMPOSE_ENV_FILE")
+  # macOS /bin/bash is 3.2: empty arrays are "unbound" under `set -u`.
+  if [[ -n "$domain" && "$NO_TLS" -eq 0 ]]; then
+    COMPOSE_CMD=("${COMPOSE[@]}" --profile tls --env-file "$COMPOSE_ENV_FILE")
+  else
+    COMPOSE_CMD=("${COMPOSE[@]}" --env-file "$COMPOSE_ENV_FILE")
+  fi
 }
 
 wait_for_health() {
-  local url="$1" tries=30
+  local url="$1" tries=45
   log "Waiting for ${url} ..."
   for ((i = 1; i <= tries; i++)); do
     if curl -sf "$url" >/dev/null 2>&1; then
@@ -150,7 +160,18 @@ wait_for_health() {
     fi
     sleep 2
   done
-  die "API did not become healthy at ${url}. Check: docker compose -f docker-compose.yml -f docker-compose.prod.yml logs api"
+  warn "API did not become healthy. Last api logs:"
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail 80 api >&2 || true
+  die "API did not become healthy at ${url}."
+}
+
+port_in_use() {
+  local port="$1"
+  lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | awk 'NR>1 {print $1, $2, $9}' | head -5 || true
+}
+
+detect_lan_ip() {
+  ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
 }
 
 cmd_init() {
@@ -221,23 +242,37 @@ deploy_api_local() {
   require_cmd curl "Install curl for the API health check."
   docker info >/dev/null 2>&1 || die "Docker is not running. Start Docker Desktop and retry."
   docker compose version >/dev/null 2>&1 || die "Need Docker Compose v2 (the docker compose plugin)."
+  local port
+  port="$(env_get PORT)"
+  port="${port:-3001}"
+  docker rm -f vridhi-api >/dev/null 2>&1 || true
+  local holders
+  holders="$(port_in_use "$port")"
+  if [[ -n "$holders" ]]; then
+    die "Port ${port} is already in use. Stop that process, then retry. (lsof -nP -iTCP:${port} -sTCP:LISTEN)"
+  fi
   compose_args
   local up_args=(up -d)
   if [[ "$SKIP_BUILD" -eq 0 ]]; then
     up_args+=(--build)
   fi
   log "${BOLD}Deploying API with Docker Compose${RESET}"
-  "${COMPOSE_CMD[@]}" "${up_args[@]}"
-  local port
-  port="$(env_get PORT)"
-  port="${port:-3001}"
+  if ! "${COMPOSE_CMD[@]}" "${up_args[@]}"; then
+    warn "Compose up failed; removing the API container and retrying once."
+    docker rm -f vridhi-api >/dev/null 2>&1 || true
+    "${COMPOSE_CMD[@]}" up -d
+  fi
   wait_for_health "http://127.0.0.1:${port}/health"
-  local domain
+  local domain lan
   domain="$(normalize_domain "$(env_get API_DOMAIN)")"
   if [[ -n "$domain" && "$NO_TLS" -eq 0 ]]; then
     ok "Caddy will serve https://${domain} (DNS A record must point at this machine)"
   else
-    warn "API is bound to 127.0.0.1:${port}. Put Caddy/Nginx in front, or set API_DOMAIN for built-in TLS."
+    lan="$(detect_lan_ip)"
+    ok "API listening on port ${port} (http://127.0.0.1:${port}/health)"
+    if [[ -n "$lan" ]]; then
+      ok "On this LAN: http://${lan}:${port}"
+    fi
   fi
 }
 
@@ -410,10 +445,19 @@ case "$TARGET" in
   mobile) cmd_mobile ;;
   all)
     cmd_api
+    if [[ -z "$(public_api_url)" && -z "$DEPLOY_HOST" ]]; then
+      lan="$(detect_lan_ip)"
+      port="$(env_get PORT)"
+      port="${port:-3001}"
+      if [[ -n "$lan" ]]; then
+        API_URL_OVERRIDE="http://${lan}:${port}"
+        warn "No EXPO_PUBLIC_API_URL set; using ${API_URL_OVERRIDE} for the mobile build (same Wi-Fi)."
+      fi
+    fi
     if [[ -z "$(public_api_url)" ]]; then
       warn "Skipping mobile: set EXPO_PUBLIC_API_URL or API_DOMAIN (or pass --api-url)."
-    else
-      cmd_mobile
+    elif ! ( cmd_mobile ); then
+      warn "Mobile build failed; the API is still running. Log in with: cd mobile && npx eas-cli login"
     fi
     ;;
   *) die "Unknown command: $TARGET" ;;
