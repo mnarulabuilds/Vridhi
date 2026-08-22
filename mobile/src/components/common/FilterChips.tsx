@@ -30,7 +30,10 @@ export default function FilterChips({
   return (
     <ScrollView
       horizontal
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
       showsHorizontalScrollIndicator={false}
+      style={styles.scroller}
       contentContainerStyle={styles.container}
     >
       {options.map(option => {
@@ -66,9 +69,14 @@ export default function FilterChips({
 }
 
 const styles = StyleSheet.create({
+  scroller: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   container: {
     gap: 10,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
   },
 
   chip: {

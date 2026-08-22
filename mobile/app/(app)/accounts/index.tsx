@@ -71,6 +71,10 @@ export default function AccountsScreen() {
         }
         ListHeaderComponent={() => (
           <>
+            <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+              <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
             <AccountsSummary
               netWorth={netWorth}
               assets={assets}
@@ -146,6 +150,18 @@ const styles = StyleSheet.create({
   content: {
     padding: SIZES.padding,
     paddingBottom: 120,
+  },
+
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 4,
+  },
+
+  backText: {
+    color: COLORS.text,
+    fontWeight: '600',
   },
 
   title: {

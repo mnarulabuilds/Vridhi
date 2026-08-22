@@ -58,6 +58,7 @@ export default function EditTransactionScreen() {
         categories={categories}
         loading={updating}
         submitText="Save Changes"
+        suggestCategory={false}
         defaultValues={{
           title: transaction.title,
           amount: Number(transaction.amount),

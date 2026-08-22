@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '@/src/theme';
 import { useAuth } from '@/src/providers/auth-provider';
 import { useBiometrics } from '@/src/providers/biometric-provider';
@@ -142,7 +144,13 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.topRow}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Settings</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <Text style={styles.muted}>{user?.email}</Text>
 
         <View style={styles.row}>
@@ -242,7 +250,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { padding: SIZES.padding, paddingBottom: 60 },
-  title: { fontSize: 28, fontWeight: '800', color: COLORS.text },
+  title: { fontSize: 28, fontWeight: '800', color: COLORS.text, textAlign: 'center', flex: 1 },
+  topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   muted: { color: COLORS.textLight, marginBottom: 16 },
   section: { fontSize: 18, fontWeight: '700', marginTop: 24, marginBottom: 12, color: COLORS.text },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },

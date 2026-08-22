@@ -1,4 +1,4 @@
-import { resolveLlmConfig } from './llm.client';
+import { NoFastOllamaModelError, pickOllamaModel, resolveLlmConfig } from './llm.client';
 
 describe('resolveLlmConfig', () => {
   it('defaults to OpenAI', () => {
@@ -11,7 +11,7 @@ describe('resolveLlmConfig', () => {
     const config = resolveLlmConfig({ AI_PROVIDER: 'ollama' });
     expect(config.provider).toBe('ollama');
     expect(config.baseUrl).toBe('http://127.0.0.1:11434/v1');
-    expect(config.model).toBe('llama3.1');
+    expect(config.model).toBe('llama3.2');
     expect(config.apiKey).toBeUndefined();
   });
 
@@ -24,5 +24,34 @@ describe('resolveLlmConfig', () => {
     });
     expect(config.baseUrl).toBe('https://api.groq.com/openai/v1');
     expect(config.model).toBe('llama-3.1-8b-instant');
+  });
+});
+
+describe('pickOllamaModel', () => {
+  const gemma = {
+    name: 'gemma4:26b',
+    size: 17_987_581_215,
+    capabilities: ['completion', 'tools', 'thinking'],
+  };
+  const llama = {
+    name: 'llama3.2:latest',
+    size: 2_000_000_000,
+    capabilities: ['completion', 'tools'],
+  };
+
+  it('uses the requested model when a small match is installed', () => {
+    expect(pickOllamaModel('llama3.2', [gemma, llama])).toBe('llama3.2:latest');
+  });
+
+  it('skips a huge requested model in favour of a small one', () => {
+    expect(pickOllamaModel('gemma4:26b', [gemma, llama])).toBe('llama3.2:latest');
+  });
+
+  it('throws when only a huge model is installed', () => {
+    expect(() => pickOllamaModel('gemma4:26b', [gemma])).toThrow(NoFastOllamaModelError);
+  });
+
+  it('throws when Ollama has no models', () => {
+    expect(() => pickOllamaModel('llama3.2', [])).toThrow(/no models/i);
   });
 });

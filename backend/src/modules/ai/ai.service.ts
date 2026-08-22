@@ -8,7 +8,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ChatDto } from './dto/chat.dto';
 import { TransactionType } from '../transactions/enum/transaction-type.enum';
 import { classifyIntent, type ClassifiedIntent } from './intent';
-import { createChatCompletion, resolveLlmConfig } from './llm.client';
+import {
+  createChatCompletion,
+  NoFastOllamaModelError,
+  prepareLlmClient,
+  resolveLlmConfig,
+  type LlmClientOptions,
+} from './llm.client';
 import {
   FALLBACK_HELP,
   renderBalances,
@@ -36,6 +42,15 @@ Rules:
 - Mention the date range you used when summarizing.
 - When the user asks what changed, what is unusual, or what bills repeat, call get_insights.
 - When the user asks net worth, assets, or liabilities, call get_net_worth.`;
+
+const LOCAL_SYSTEM_PROMPT = `You are Vridhi, a personal finance assistant for India (INR unless noted).
+Answer only from the ledger snapshot JSON. Never invent numbers.
+If the snapshot does not contain the answer, say so and suggest a structured question (spend, budgets, net worth).
+Do not give investment, tax, or legal advice. Transfers are not income or expenses.
+Reply in at most 4 short sentences. Format money as ₹1,250.00.`;
+
+const HEAVY_MODEL_HELP =
+  'Open chat needs a small local model so it does not freeze this machine. Run `ollama pull llama3.2`, then ask again. Spending, net worth, budgets, and recurring bills still work from your books without a model.';
 
 const TOOLS = [
   {
@@ -275,16 +290,82 @@ export class AiService {
     });
   }
 
-  private async completeWithLlm(userId: string, dto: ChatDto) {
-    const llm = this.llmConfig();
+  private async ledgerSnapshot(userId: string, from: string, to: string, asOf: string) {
+    const [summary, worth, insights, recent] = await Promise.all([
+      this.reporting.summary(userId, from, to),
+      this.reporting.netWorth(userId, to),
+      this.reporting.insights(userId, asOf),
+      this.transactions.findAll(userId, { from, to, limit: 8 }),
+    ]);
+    const spending = Object.entries(summary.spendingByCategory ?? {})
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 8)
+      .map(([name, amount]) => ({ name, amount: Number(amount) }));
+    return {
+      period: { from, to },
+      income: summary.income,
+      expenses: summary.expenses,
+      netCashFlow: summary.netCashFlow,
+      savingsRate: summary.savingsRate,
+      spending,
+      budgets: (summary.budgetVsActual ?? []).map((row) => ({
+        category: row.categoryName,
+        planned: row.planned,
+        spent: row.spent,
+        remaining: row.remaining,
+      })),
+      balances: (summary.balances ?? []).map((row) => ({
+        name: row.name,
+        balance: row.balance,
+        currency: row.currency,
+      })),
+      netWorth: {
+        assets: worth.assets,
+        liabilities: worth.liabilities,
+        netWorth: worth.netWorth,
+      },
+      notices: (insights.notices ?? []).map((notice) => ({
+        title: notice.title,
+        detail: notice.detail,
+      })),
+      recent: recent.items.map((item) => ({
+        title: item.title,
+        amount: Number(item.amount),
+        type: item.type,
+        category: item.category?.name ?? null,
+      })),
+    };
+  }
+
+  private async completeLocal(userId: string, dto: ChatDto, llm: LlmClientOptions) {
+    const lastUser = [...dto.messages].reverse().find((m) => m.role === 'user');
+    const period = classifyIntent(lastUser?.content ?? '');
+    const snapshot = await this.ledgerSnapshot(userId, period.from, period.to, period.asOf);
+    const message = await createChatCompletion(llm, {
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: LOCAL_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `Ledger snapshot:\n${JSON.stringify(snapshot)}\n\nQuestion: ${lastUser?.content ?? ''}`,
+        },
+      ],
+    });
+    return {
+      text: message.content?.trim() || 'I could not complete that request.',
+      sources: ['get_financial_summary', 'get_net_worth', 'get_insights', 'list_transactions'],
+    };
+  }
+
+  private async completeWithTools(userId: string, dto: ChatDto, llm: LlmClientOptions) {
     const messages: Array<Record<string, unknown>> = [
       { role: 'system', content: SYSTEM_PROMPT },
-      ...dto.messages.map((m) => ({ role: m.role, content: m.content })),
+      ...dto.messages.slice(-8).map((m) => ({ role: m.role, content: m.content })),
     ];
 
     let finalText = 'I could not complete that request.';
     const sources: string[] = [];
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 3; i += 1) {
       const message = await createChatCompletion(llm, {
         messages,
         tools: TOOLS,
@@ -317,6 +398,14 @@ export class AiService {
     return { text: finalText, sources };
   }
 
+  private async completeWithLlm(userId: string, dto: ChatDto) {
+    const llm = await prepareLlmClient(this.llmConfig());
+    if (llm.provider === 'ollama') {
+      return this.completeLocal(userId, dto, llm);
+    }
+    return this.completeWithTools(userId, dto, llm);
+  }
+
   async chat(userId: string, dto: ChatDto) {
     const conversationId = await this.ensureConversation(userId, dto);
     const lastUser = [...dto.messages].reverse().find((m) => m.role === 'user');
@@ -346,15 +435,20 @@ export class AiService {
         sources = answered.sources;
         mode = 'llm';
       } catch (error) {
-        const llm = this.llmConfig();
-        const detail = error instanceof Error ? error.message : 'unknown error';
-        throw new ServiceUnavailableException(
-          `Could not reach the ${llm.provider} model at ${llm.baseUrl}. ${
-            llm.provider === 'ollama'
-              ? 'Start Ollama (ollama serve) or ask a structured question such as spending, budgets, or recurring bills.'
-              : 'Check OPENAI_API_KEY, or set AI_PROVIDER=ollama to use a local model.'
-          } ${detail}`,
-        );
+        if (error instanceof NoFastOllamaModelError) {
+          mode = 'fallback';
+          text = HEAVY_MODEL_HELP;
+        } else {
+          const llm = this.llmConfig();
+          const detail = error instanceof Error ? error.message : 'unknown error';
+          throw new ServiceUnavailableException(
+            `Could not reach the ${llm.provider} model at ${llm.baseUrl}. ${
+              llm.provider === 'ollama'
+                ? 'Start Ollama (ollama serve) or pull a small model with: ollama pull llama3.2'
+                : 'Check OPENAI_API_KEY, or set AI_PROVIDER=ollama to use a local model.'
+            } ${detail}`,
+          );
+        }
       }
     }
 

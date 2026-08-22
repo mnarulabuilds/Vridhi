@@ -20,6 +20,8 @@ import { useAccounts } from '@/src/hooks/useAccounts';
 import { useCategories } from '@/src/hooks/useCategories';
 import { useTransactions } from '@/src/hooks/useTransactions';
 import { loadQuickAddPrefs, saveQuickAddPrefs } from '@/src/utils/quick-add-prefs';
+import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
+import { useCategorySuggestion } from '@/src/hooks/useCategorySuggestion';
 import { confirmAlert } from '@/src/utils/confirmAlert';
 import { formatCurrency } from '@/src/utils/currency';
 
@@ -68,6 +70,15 @@ export default function QuickAddTransactionScreen() {
   const parsedAmount = Number(amount.replace(/,/g, ''));
   const selectedCategory = typeCategories.find((category) => category.id === categoryId);
   const canSave = parsedAmount > 0 && Boolean(accountId) && Boolean(categoryId);
+  const debouncedTitle = useDebouncedValue(title, 280);
+  const { data: suggestion } = useCategorySuggestion(debouncedTitle, type);
+
+  useEffect(() => {
+    if (!suggestion?.categoryId) return;
+    if (typeCategories.some((category) => category.id === suggestion.categoryId)) {
+      setCategoryId(suggestion.categoryId);
+    }
+  }, [suggestion?.categoryId, typeCategories]);
 
   async function save() {
     if (!canSave || creating) return;
@@ -79,6 +90,7 @@ export default function QuickAddTransactionScreen() {
         type,
         accountId,
         categoryId,
+        merchant: title.trim() || undefined,
         transactionDate: new Date().toISOString(),
       });
       await saveQuickAddPrefs(accountId, categoryId);
@@ -214,6 +226,9 @@ export default function QuickAddTransactionScreen() {
           placeholder={selectedCategory ? selectedCategory.name : 'What’s it for? (optional)'}
           placeholderTextColor={COLORS.muted}
         />
+        {suggestion?.categoryName ? (
+          <Text style={styles.hint}>Using {suggestion.categoryName} because you used it for this before.</Text>
+        ) : null}
 
         <PrimaryButton title="Save" loading={creating} disabled={!canSave} onPress={save} />
         <Pressable onPress={moreDetails} style={styles.more}>
@@ -274,4 +289,5 @@ const styles = StyleSheet.create({
   },
   more: { alignItems: 'center', paddingVertical: 16 },
   moreText: { color: COLORS.primary, fontWeight: '700' },
+  hint: { color: COLORS.textLight, fontSize: 12, marginTop: -8, marginBottom: 12 },
 });

@@ -13,6 +13,6 @@ export function validateEnv(config: Record<string, unknown>) {
     CORS_ORIGINS: config.CORS_ORIGINS ?? '',
     AI_PROVIDER: String(config.AI_PROVIDER ?? 'openai').toLowerCase(),
     OPENAI_BASE_URL: config.OPENAI_BASE_URL ?? '',
-    OPENAI_MODEL: config.OPENAI_MODEL ?? (String(config.AI_PROVIDER ?? '').toLowerCase() === 'ollama' ? 'llama3.1' : 'gpt-4o-mini'),
+    OPENAI_MODEL: config.OPENAI_MODEL ?? (String(config.AI_PROVIDER ?? '').toLowerCase() === 'ollama' ? 'llama3.2' : 'gpt-4o-mini'),
   };
 }

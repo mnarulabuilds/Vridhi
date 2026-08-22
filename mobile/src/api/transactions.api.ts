@@ -74,6 +74,11 @@ const TransactionsApi = {
   remove(id: string) {
     return api.delete(`/transactions/${id}`);
   },
+  suggestCategory(params: { q: string; type?: TransactionType }) {
+    return api.get<{ categoryId: string; categoryName: string } | null>('/transactions/category-suggestion', {
+      params,
+    });
+  },
 };
 
 export default TransactionsApi;

@@ -1,28 +1,28 @@
 import React, { useMemo, useState } from 'react';
-
 import {
+  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
-
 import { router } from 'expo-router';
-
-
-import TransactionSummary from '@/src/components/transactions/TransactionSummary';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
-
-import { categoryLabel } from '@/src/api/transactions.api';
+import { TransactionType } from '@/src/api/transactions.api';
 import { useTransactions } from '@/src/hooks/useTransactions';
-
-import { COLORS } from '@/src/theme';
-import ScreenContainer from '@/src/components/ScreenContainer';
+import { useAccounts } from '@/src/hooks/useAccounts';
+import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
+import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
+import { COLORS, SIZES } from '@/src/theme';
 import FilterChips from '@/src/components/common/FilterChips';
 import EmptyTransactions from '@/src/components/transactions/EmptyTransactions';
 import FloatingActionButton from '@/src/components/common/FloatingActionButton';
+import { formatCurrency } from '@/src/utils/currency';
+import { monthBounds } from '@/src/utils/month';
 
-const FILTERS = [
+const TYPE_FILTERS = [
   { label: 'All', value: 'ALL' },
   { label: 'Income', value: 'INCOME' },
   { label: 'Expense', value: 'EXPENSE' },
@@ -30,157 +30,171 @@ const FILTERS = [
 ];
 
 export default function TransactionsScreen() {
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState('ALL');
+  const [accountId, setAccountId] = useState('ALL');
+  const [pulling, setPulling] = useState(false);
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const { accounts } = useAccounts();
+  const bounds = monthBounds(new Date());
+  const { data: month } = useFinancialSummary(bounds.from, bounds.to);
+
+  const query = useMemo(
+    () => ({
+      search: debouncedSearch.trim() || undefined,
+      type: type === 'ALL' ? undefined : (type as TransactionType),
+      accountId: accountId === 'ALL' ? undefined : accountId,
+      limit: 50,
+    }),
+    [debouncedSearch, type, accountId],
+  );
+
   const {
     transactions,
+    isLoading,
     refetch,
-    isFetching,
-  } = useTransactions();
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useTransactions(query);
 
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] =
-    useState('ALL');
-
-  const filteredTransactions =
-    useMemo(() => {
-      return transactions.filter(t => {
-        const matchesSearch =
-            t.title.toLowerCase().includes(query.toLowerCase()) ||
-            categoryLabel(t).toLowerCase().includes(query.toLowerCase()) ||
-          t.merchant
-            ?.toLowerCase()
-            .includes(query.toLowerCase());
-
-        const matchesFilter =
-          filter === 'ALL'
-            ? true
-            : t.type === filter;
-
-        return (
-          matchesSearch &&
-          matchesFilter
-        );
-      });
-    }, [
-      transactions,
-      query,
-      filter,
-    ]);
-
-  const income =
-    filteredTransactions
-      .filter(
-        t => t.type === 'INCOME',
-      )
-      .reduce(
-        (sum, t) =>
-          sum + Number(t.amount),
-        0,
-      );
-
-  const expense =
-    filteredTransactions
-      .filter(
-        t => t.type === 'EXPENSE',
-      )
-      .reduce(
-        (sum, t) =>
-          sum + Number(t.amount),
-        0,
-      );
+  const filtered = Boolean(debouncedSearch.trim() || type !== 'ALL' || accountId !== 'ALL');
 
   return (
-    <ScreenContainer
-      title="Transactions"
-      scrollable
-    >
-
-      <FilterChips
-        value={filter}
-        options={FILTERS}
-        onChange={setFilter}
-      />
-
-      <FlatList
-        data={filteredTransactions}
-        keyExtractor={item => item.id}
-        refreshing={isFetching}
-        onRefresh={refetch}
-        ListHeaderComponent={
-          <>
-            <TransactionSummary
-              income={income}
-              expense={expense}
-            />
-
-            <TextInput
-              placeholder="Search transactions..."
-              value={query}
-              onChangeText={setQuery}
-              style={styles.search}
-            />
-
-            <Text
-              style={styles.heading}
-            >
-              Recent Activity
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Transactions</Text>
+        <View style={styles.monthRow}>
+          <View style={styles.monthStat}>
+            <Text style={styles.monthLabel}>In {bounds.label}</Text>
+            <Text style={[styles.monthValue, { color: COLORS.success }]}>
+              {formatCurrency(month?.income ?? 0)}
             </Text>
-          </>
-        }
-        renderItem={({ item }) => (
-          <TransactionCard
-            transaction={item}
-            onPress={() =>
-              router.push(
-                `/transactions/${item.id}`,
-              )
-            }
+          </View>
+          <View style={styles.monthStat}>
+            <Text style={styles.monthLabel}>Spent</Text>
+            <Text style={[styles.monthValue, { color: COLORS.danger }]}>
+              {formatCurrency(month?.expenses ?? 0)}
+            </Text>
+          </View>
+        </View>
+        <TextInput
+          placeholder="Search title, merchant, or category"
+          value={search}
+          onChangeText={setSearch}
+          style={styles.search}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
+        <FilterChips value={type} options={TYPE_FILTERS} onChange={setType} />
+        {accounts.length > 1 ? (
+          <FilterChips
+            value={accountId}
+            options={[
+              { label: 'All accounts', value: 'ALL' },
+              ...accounts.map((account) => ({ label: account.name, value: account.id })),
+            ]}
+            onChange={setAccountId}
           />
-        )}
-        ListEmptyComponent={
-          <EmptyTransactions
-          />
-        }
-      />
+        ) : null}
+      </View>
 
-      <FloatingActionButton
-        onPress={() =>
-          router.push(
-            '/transactions/quick',
-          )
-        }
-      />
-    </ScreenContainer>
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={COLORS.primary} />
+        </View>
+      ) : (
+        <FlatList
+          style={styles.list}
+          data={transactions}
+          keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshing={pulling}
+          onRefresh={async () => {
+            setPulling(true);
+            try {
+              await refetch();
+            } finally {
+              setPulling(false);
+            }
+          }}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+          }}
+          onEndReachedThreshold={0.4}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <TransactionCard
+              transaction={item}
+              onPress={() => router.push(`/transactions/${item.id}`)}
+            />
+          )}
+          ListEmptyComponent={
+            <EmptyTransactions
+              title={filtered ? 'No matches' : 'No transactions yet'}
+              subtitle={
+                filtered
+                  ? 'Try a different search or clear the filters.'
+                  : 'Add your first income or expense with the + button.'
+              }
+            />
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator color={COLORS.primary} style={styles.more} />
+            ) : null
+          }
+        />
+      )}
+
+      <FloatingActionButton onPress={() => router.push('/transactions/quick')} />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  search: {
-    backgroundColor: '#fff',
-
-    borderRadius: 14,
-
-    paddingHorizontal: 16,
-
-    paddingVertical: 14,
-
-    marginBottom: 18,
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  header: {
+    paddingHorizontal: SIZES.padding,
+    paddingBottom: 4,
   },
-
-  heading: {
-    fontSize: 18,
-
-    fontWeight: '700',
-
-    marginBottom: 14,
-
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
     color: COLORS.text,
+    marginTop: 4,
   },
-
-  empty: {
-    textAlign: 'center',
-
-    marginTop: 60,
-
-    color: COLORS.textLight,
+  monthRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 12,
   },
+  monthStat: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  monthLabel: { color: COLORS.textLight, fontSize: 12 },
+  monthValue: { fontWeight: '800', marginTop: 4, fontSize: 15 },
+  search: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 4,
+  },
+  list: { flex: 1 },
+  listContent: {
+    paddingHorizontal: SIZES.padding,
+    paddingTop: 8,
+    paddingBottom: 120,
+    flexGrow: 1,
+  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  more: { marginVertical: 16 },
 });

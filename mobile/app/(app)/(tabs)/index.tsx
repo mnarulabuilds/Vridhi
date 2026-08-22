@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, SIZES } from '@/src/theme';
 import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
 import { useTransactions } from '@/src/hooks/useTransactions';
+import { useAccounts } from '@/src/hooks/useAccounts';
 import { useAuth } from '@/src/providers/auth-provider';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
 import { formatCurrency } from '@/src/utils/currency';
@@ -35,6 +36,7 @@ export default function DashboardScreen() {
   });
   const { data: insights } = useInsights(bounds.from);
   const { data: worth } = useNetWorth(bounds.to);
+  const { accounts } = useAccounts();
   const notices = (insights?.notices ?? []).filter((notice) => notice.kind !== 'info').slice(0, 2);
 
   const income = summary?.income ?? 0;
@@ -61,9 +63,14 @@ export default function DashboardScreen() {
               <Text style={styles.hello}>Hello{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
               <Text style={styles.heroLabel}>Net worth · {bounds.label}</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Ionicons name="person-circle-outline" size={36} color="#fff" />
-            </TouchableOpacity>
+            <View style={styles.heroActions}>
+              <TouchableOpacity onPress={() => router.push('/settings')} hitSlop={8}>
+                <Ionicons name="settings-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/profile')} hitSlop={8}>
+                <Ionicons name="person-circle-outline" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.heroAmount}>{formatCurrency(netWorth)}</Text>
           <Text style={styles.heroSub}>
@@ -86,6 +93,34 @@ export default function DashboardScreen() {
           <Stat label="Expenses" value={formatCurrency(expenses)} color={COLORS.danger} />
           <Stat label="Cash flow" value={formatCurrency(cashFlow)} color={COLORS.primary} />
         </View>
+
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Accounts</Text>
+          <TouchableOpacity onPress={() => router.push('/accounts')}>
+            <Text style={styles.link}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        {accounts.length === 0 ? (
+          <Text style={styles.empty}>Add an account to start tracking balances and net worth.</Text>
+        ) : (
+          accounts.slice(0, 3).map((account) => (
+            <TouchableOpacity
+              key={account.id}
+              style={styles.accountRow}
+              onPress={() => router.push(`/accounts/${account.id}`)}
+            >
+              <View>
+                <Text style={styles.accountName}>{account.name}</Text>
+                <Text style={styles.accountMeta}>
+                  {account.kind === 'liability' ? 'Owed' : 'Balance'}
+                </Text>
+              </View>
+              <Text style={styles.accountBalance}>
+                {formatCurrency(Number(account.currentBalance ?? account.openingBalance ?? 0), account.currency)}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
 
         {notices.length > 0 ? (
           <>
@@ -141,6 +176,7 @@ const styles = StyleSheet.create({
   scroll: { padding: SIZES.padding, paddingBottom: 120 },
   hero: { borderRadius: 24, padding: 20, marginBottom: 16, ...SHADOWS.medium },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hello: { color: '#fff', fontSize: 18, fontWeight: '700' },
   heroLabel: { color: 'rgba(255,255,255,0.8)', marginTop: 4 },
   heroAmount: { color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 16 },
@@ -166,6 +202,19 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   link: { color: COLORS.primary, fontWeight: '700' },
   empty: { color: COLORS.textLight, marginBottom: 20 },
+  accountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    ...SHADOWS.small,
+  },
+  accountName: { fontWeight: '700', color: COLORS.text },
+  accountMeta: { color: COLORS.textLight, fontSize: 12, marginTop: 2 },
+  accountBalance: { fontWeight: '800', color: COLORS.text },
   fab: {
     position: 'absolute',
     right: 20,

@@ -54,6 +54,6 @@ export const AiApi = {
         sources?: string[];
         mode?: 'template' | 'llm' | 'fallback';
         disclaimer: string;
-      }>('/ai/chat', payload)
+      }>('/ai/chat', payload, { timeout: 90_000 })
     ).data,
 };

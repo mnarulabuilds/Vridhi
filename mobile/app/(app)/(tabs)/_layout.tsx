@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/src/theme';
 
 export default function TabLayout() {
@@ -33,7 +33,16 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="transactions"
+        options={{
+          title: 'Transactions',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'swap-horizontal' : 'swap-horizontal-outline'} size={24} color={color} />
           ),
         }}
       />
@@ -42,7 +51,7 @@ export default function TabLayout() {
         options={{
           title: 'Insights',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={22} color={color} />
+            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -51,42 +60,7 @@ export default function TabLayout() {
         options={{
           title: 'Ask',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} size={22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="accounts"
-        options={{
-          title: "Accounts",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="wallet-outline"
-              color={color}
-              size={size}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="transactions"
-        options={{
-          title: 'Transactions',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons
-              name="swap-horizontal"
-              color={color}
-              size={size}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
+            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} />
           ),
         }}
       />

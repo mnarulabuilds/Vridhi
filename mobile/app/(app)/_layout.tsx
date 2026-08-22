@@ -28,6 +28,8 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="accounts/index" />
       <Stack.Screen name="accounts/create" options={{ title: 'Create Account' }} />
       <Stack.Screen name="transactions/quick" options={{ presentation: 'modal' }} />
     </Stack>

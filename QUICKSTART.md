@@ -24,7 +24,7 @@ The API listens on `http://localhost:3001`. Health: `GET /health`. OpenAPI: `htt
 Ask answers spending, savings rate, budgets, balances, and recurring/unusual notices from your ledger **without** a language model. Open-ended chat needs one of:
 
 - `OPENAI_API_KEY` (default `AI_PROVIDER=openai`), or
-- a local model: install [Ollama](https://ollama.com), run `ollama pull llama3.1`, then set `AI_PROVIDER=ollama` and `OPENAI_MODEL=llama3.1` (optional `OPENAI_BASE_URL=http://127.0.0.1:11434/v1`).
+- a local model: install [Ollama](https://ollama.com), run `ollama pull llama3.2`, then set `AI_PROVIDER=ollama` and `OPENAI_MODEL=llama3.2`. Avoid 20B+ models for Ask; they stall the machine.
 
 Set `CORS_ORIGINS` to your Expo URL in production (required). Password reset shows a debug token only when `NODE_ENV` is not `production`.
 

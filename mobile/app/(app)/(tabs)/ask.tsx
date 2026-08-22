@@ -109,7 +109,7 @@ export default function AskScreen() {
           role: 'assistant',
           content:
             message ??
-            'I could not answer that right now. Common questions still work from your books. For open chat, start Ollama or set OPENAI_API_KEY.',
+            'I could not answer that right now. Common questions still work from your books. For open chat, use a small Ollama model (`ollama pull llama3.2`) or set OPENAI_API_KEY.',
         },
       ]);
     } finally {
@@ -142,7 +142,7 @@ export default function AskScreen() {
           {messages.length === 0 ? (
             <View style={styles.emptyBlock}>
               <Text style={styles.empty}>
-                Spending, net worth, budgets, balances, and recurring bills are answered from your ledger. Open chat needs Ollama or an API key.
+                Spending, net worth, budgets, balances, and recurring bills are answered from your ledger. Open chat needs a small Ollama model (`ollama pull llama3.2`) or an API key.
               </Text>
               <View style={styles.suggestions}>
                 {SUGGESTIONS.map((suggestion) => (

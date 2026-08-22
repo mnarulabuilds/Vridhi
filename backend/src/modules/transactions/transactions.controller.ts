@@ -14,6 +14,7 @@ import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
+import { TransactionType } from './enum/transaction-type.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorator/current-user.decorator';
 import { type CurrentUserData } from '../../common/interfaces/current-user.interface';
@@ -33,6 +34,15 @@ export class TransactionsController {
   @Get()
   findAll(@CurrentUser() user: CurrentUserData, @Query() query: ListTransactionsQueryDto) {
     return this.transactionsService.findAll(user.id, query);
+  }
+
+  @Get('category-suggestion')
+  suggestCategory(
+    @CurrentUser() user: CurrentUserData,
+    @Query('q') q: string,
+    @Query('type') type?: TransactionType,
+  ) {
+    return this.transactionsService.suggestCategory(user.id, q ?? '', type);
   }
 
   @Get(':id')

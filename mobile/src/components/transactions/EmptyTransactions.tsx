@@ -10,9 +10,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/src/theme';
 
 interface Props {
+  title?: string;
+  subtitle?: string;
 }
 
 export default function EmptyTransactions({
+  title = 'No transactions yet',
+  subtitle = 'Start tracking your income and expenses by creating your first transaction.',
 }: Props) {
   return (
     <View style={styles.container}>
@@ -23,13 +27,11 @@ export default function EmptyTransactions({
       />
 
       <Text style={styles.title}>
-        No Transactions Yet
+        {title}
       </Text>
 
       <Text style={styles.subtitle}>
-        Start tracking your income and
-        expenses by creating your first
-        transaction.
+        {subtitle}
       </Text>
 
     </View>

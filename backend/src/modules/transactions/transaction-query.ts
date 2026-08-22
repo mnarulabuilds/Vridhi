@@ -27,12 +27,17 @@ export function buildTransactionWhere(
     });
   }
   if (query.search) {
-    filters.push({
-      OR: [
-        { title: { contains: query.search, mode: 'insensitive' } },
-        { merchant: { contains: query.search, mode: 'insensitive' } },
-      ],
-    });
+    const term = query.search.trim();
+    if (term) {
+      filters.push({
+        OR: [
+          { title: { contains: term, mode: 'insensitive' } },
+          { merchant: { contains: term, mode: 'insensitive' } },
+          { notes: { contains: term, mode: 'insensitive' } },
+          { category: { name: { contains: term, mode: 'insensitive' } } },
+        ],
+      });
+    }
   }
 
   return { AND: filters };

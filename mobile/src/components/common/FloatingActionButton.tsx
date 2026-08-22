@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
 
     right: 24,
 
-    bottom: 32,
+    bottom: 24,
 
     width: 60,
 

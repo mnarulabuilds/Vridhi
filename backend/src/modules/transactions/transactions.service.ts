@@ -9,6 +9,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TransactionType } from './enum/transaction-type.enum';
+import { pickCategoryMemory } from './category-memory';
 import { buildTransactionWhere } from './transaction-query';
 
 const include = {
@@ -176,5 +177,43 @@ export class TransactionsService {
     await this.findOne(userId, id);
     await this.prisma.transaction.delete({ where: { id } });
     return { success: true };
+  }
+
+  async suggestCategory(userId: string, q: string, type?: TransactionType) {
+    const needle = q.trim();
+    if (needle.length < 2) return null;
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        account: { userId },
+        categoryId: { not: null },
+        category: { isArchived: false },
+        ...(type ? { type } : { type: { not: TransactionType.TRANSFER } }),
+      },
+      select: {
+        title: true,
+        merchant: true,
+        categoryId: true,
+        category: { select: { id: true, name: true } },
+      },
+      orderBy: { transactionDate: 'desc' },
+      take: 80,
+    });
+    const match = pickCategoryMemory(
+      needle,
+      rows.flatMap((row) =>
+        row.category && row.categoryId
+          ? [
+              {
+                title: row.title,
+                merchant: row.merchant,
+                categoryId: row.categoryId,
+                categoryName: row.category.name,
+              },
+            ]
+          : [],
+      ),
+    );
+    if (!match) return null;
+    return { categoryId: match.categoryId, categoryName: match.categoryName };
   }
 }
