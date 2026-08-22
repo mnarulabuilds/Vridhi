@@ -1,53 +1,55 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
-const ACCESS_TOKEN_KEY = '@vridhi_access_token';
+const ACCESS_TOKEN_KEY = 'vridhi_access_token';
+const REFRESH_TOKEN_KEY = 'vridhi_refresh_token';
+
+async function getItem(key: string) {
+  try {
+    if (Platform.OS === 'web') {
+      return AsyncStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
+async function setItem(key: string, value: string) {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function removeItem(key: string) {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+    return;
+  }
+  await SecureStore.deleteItemAsync(key);
+}
 
 class TokenStorage {
-  async getAccessToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(
-        ACCESS_TOKEN_KEY,
-      );
-    } catch (error) {
-      console.error(
-        'Failed to read access token',
-        error,
-      );
-      return null;
+  getAccessToken() {
+    return getItem(ACCESS_TOKEN_KEY);
+  }
+
+  getRefreshToken() {
+    return getItem(REFRESH_TOKEN_KEY);
+  }
+
+  async saveTokens(accessToken: string, refreshToken?: string) {
+    await setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      await setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
   }
 
-  async saveAccessToken(
-    token: string,
-  ): Promise<void> {
-    try {
-      await AsyncStorage.setItem(
-        ACCESS_TOKEN_KEY,
-        token,
-      );
-    } catch (error) {
-      console.error(
-        'Failed to save access token',
-        error,
-      );
-    }
-  }
-
-  async removeAccessToken(): Promise<void> {
-    try {
-      await AsyncStorage.removeItem(
-        ACCESS_TOKEN_KEY,
-      );
-    } catch (error) {
-      console.error(
-        'Failed to remove access token',
-        error,
-      );
-    }
-  }
-
-  async clear(): Promise<void> {
-    await this.removeAccessToken();
+  async clear() {
+    await Promise.all([removeItem(ACCESS_TOKEN_KEY), removeItem(REFRESH_TOKEN_KEY)]);
   }
 }
 

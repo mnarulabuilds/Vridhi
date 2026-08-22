@@ -1,101 +1,53 @@
-import AuthApi, {
-  LoginRequest,
-  RegisterRequest,
-} from '@/src/api/auth.api';
-
+import AuthApi, { LoginRequest, RegisterRequest } from '@/src/api/auth.api';
 import TokenStorage from '@/src/storage/token.storage';
 import UserStorage from '@/src/storage/user.storage';
-
-import {
-  AuthenticatedUser,
-  AuthResponse,
-} from '@/src/types/auth';
+import { AuthenticatedUser, AuthResponse } from '@/src/types/auth';
 
 class AuthService {
-  /**
-   * Login user
-   */
-  async login(
-    payload: LoginRequest,
-  ): Promise<AuthResponse> {
-    const response =
-      await AuthApi.login(payload);
-
+  private async persist(response: AuthResponse) {
     await Promise.all([
-      TokenStorage.saveAccessToken(
-        response.accessToken,
-      ),
-      UserStorage.saveCurrentUser(
-        response.user,
-      ),
+      TokenStorage.saveTokens(response.accessToken, response.refreshToken),
+      UserStorage.saveCurrentUser(response.user),
     ]);
-
     return response;
   }
 
-  /**
-   * Register user
-   */
-  async register(
-    payload: RegisterRequest,
-  ): Promise<AuthResponse> {
-    const response =
-      await AuthApi.register(payload);
-
-    await Promise.all([
-      TokenStorage.saveAccessToken(
-        response.accessToken,
-      ),
-      UserStorage.saveCurrentUser(
-        response.user,
-      ),
-    ]);
-
-    return response;
+  login(payload: LoginRequest) {
+    return AuthApi.login(payload).then((response) => this.persist(response));
   }
 
-  /**
-   * Restore JWT
-   */
-  async getAccessToken(): Promise<string | null> {
+  register(payload: RegisterRequest) {
+    return AuthApi.register(payload).then((response) => this.persist(response));
+  }
+
+  getAccessToken() {
     return TokenStorage.getAccessToken();
   }
 
-  /**
-   * Restore logged in user
-   */
-  async getCurrentUser(): Promise<AuthenticatedUser | null> {
+  getCurrentUser() {
     return UserStorage.getCurrentUser();
   }
 
-  /**
-   * Refresh user from backend
-   */
   async me(): Promise<AuthenticatedUser> {
     const user = await AuthApi.me();
-
-    await UserStorage.saveCurrentUser(
-      user,
-    );
-
+    await UserStorage.saveCurrentUser(user);
     return user;
   }
 
-  /**
-   * Logout
-   */
-  async logout(): Promise<void> {
-    await Promise.all([
-      TokenStorage.clear(),
-      UserStorage.clear(),
-    ]);
+  async logout() {
+    const refreshToken = await TokenStorage.getRefreshToken();
+    try {
+      if (refreshToken) {
+        await AuthApi.logout(refreshToken);
+      }
+    } catch {
+      // still clear local session
+    }
+    await Promise.all([TokenStorage.clear(), UserStorage.clear()]);
   }
 
-  /**
-   * Clear everything
-   */
-  async clearSession(): Promise<void> {
-    await this.logout();
+  clearSession() {
+    return this.logout();
   }
 }
 

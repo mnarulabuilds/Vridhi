@@ -17,11 +17,12 @@ import {
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 
 import { useTransactions } from '@/src/hooks/useTransactions';
+import { useTransaction } from '@/src/hooks/useTransaction';
 
 import { formatCurrency } from '@/src/utils/currency';
 import { relativeDate } from '@/src/utils/date';
 import ScreenContainer from '@/src/components/ScreenContainer';
-import { useTransaction } from '@/src/hooks/useTransaction';
+import { categoryLabel } from '@/src/api/transactions.api';
 
 export default function TransactionDetailsScreen() {
   const { id } =
@@ -117,9 +118,7 @@ export default function TransactionDetailsScreen() {
 
       <Info
         label="Category"
-        value={
-          transaction.category
-        }
+        value={categoryLabel(transaction)}
       />
 
       <Info

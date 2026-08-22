@@ -13,34 +13,27 @@ export interface RegisterRequest {
 }
 
 class AuthApi {
-  async login(
-    payload: LoginRequest,
-  ): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>(
-      '/auth/login',
-      payload,
-    );
-
+  async login(payload: LoginRequest): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/login', payload);
     return data;
   }
 
-  async register(
-    payload: RegisterRequest,
-  ): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>(
-      '/auth/register',
-      payload,
-    );
-
+  async register(payload: RegisterRequest): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/register', payload);
     return data;
+  }
+
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/refresh', { refreshToken });
+    return data;
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await api.post('/auth/logout', { refreshToken });
   }
 
   async me(): Promise<AuthenticatedUser> {
-    const { data } =
-      await api.get<AuthenticatedUser>(
-        '/auth/me',
-      );
-
+    const { data } = await api.get<AuthenticatedUser>('/auth/me');
     return data;
   }
 }

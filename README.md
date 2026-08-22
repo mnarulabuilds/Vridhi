@@ -200,18 +200,20 @@ The architecture will evolve incrementally as the application grows.
 
 ### Mobile
 
-- React Native
+- Expo / React Native
 - TypeScript
+- TanStack Query
 
 ### Backend
 
-The backend architecture is being developed incrementally as Vridhi evolves into a complete full-stack application.
+- NestJS 11
+- Prisma 7 + PostgreSQL
+- JWT access + refresh tokens
+- Optional OpenAI-compatible chat with tool calling
 
 ### Data
 
-A persistent data layer will support financial transactions, accounts, budgets, portfolios, goals, and historical financial information.
-
-Additional technologies will be introduced only when the product requirements justify them.
+Postgres stores users, accounts, transactions, categories, budgets, refresh tokens, and AI conversation history.
 
 ---
 
@@ -219,13 +221,15 @@ Additional technologies will be introduced only when the product requirements ju
 
 ### Phase 1 — Money
 
-- [ ] Accounts
-- [ ] Transactions
-- [ ] Categories
-- [ ] Income tracking
-- [ ] Expense tracking
-- [ ] Budgets
-- [ ] Financial dashboard
+- [x] Accounts
+- [x] Transactions
+- [x] Categories
+- [x] Income tracking
+- [x] Expense tracking
+- [x] Budgets
+- [x] Financial dashboard
+- [x] CSV import
+- [x] Grounded AI Q&A over recorded data
 
 ### Phase 2 — Wealth
 

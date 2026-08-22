@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { router, useFocusEffect } from "expo-router";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,43 +6,39 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList,
-  Dimensions,
-  Image,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { useBudgetData } from "@/src/hooks/useBudgetData";
-import { formatMonthKey } from "@/src/storage";
-import { AccountData, Expense } from "@/src/types";
-import { CATEGORY_ICONS, COLORS, SHADOWS, SIZES } from "@/src/theme";
+} from 'react-native';
+import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, SHADOWS, SIZES } from '@/src/theme';
 import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
 import { useTransactions } from '@/src/hooks/useTransactions';
+import { useAccounts } from '@/src/hooks/useAccounts';
+import { useAuth } from '@/src/providers/auth-provider';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
-
-const { width } = Dimensions.get("window");
+import { formatCurrency } from '@/src/utils/currency';
+import { monthBounds, shiftMonth } from '@/src/utils/month';
 
 export default function DashboardScreen() {
-  const { state, loading, currentMonth, currencySymbol, actions } =
-    useBudgetData();
+  const { user } = useAuth();
+  const [month, setMonth] = useState(() => new Date());
+  const bounds = monthBounds(month);
+  const { data: summary, isLoading: summaryLoading } = useFinancialSummary(bounds.from, bounds.to);
+  const { transactions, isLoading: txLoading } = useTransactions({
+    from: bounds.from,
+    to: bounds.to,
+    limit: 8,
+  });
+  const { accounts } = useAccounts();
 
-  const [year, month] = currentMonth.split('-').map(Number);
-  const periodFrom = new Date(year, month - 1, 1).toISOString();
-  const periodTo = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
-  const { data: serverSummary } = useFinancialSummary(
-    periodFrom,
-    periodTo,
-  );
-  const { transactions: serverTransactions } = useTransactions();
+  const income = summary?.income ?? 0;
+  const expenses = summary?.expenses ?? 0;
+  const cashFlow = summary?.netCashFlow ?? income - expenses;
+  const savingsRate = ((summary?.savingsRate ?? 0) * 100).toFixed(1);
+  const netWorth = (summary?.balances ?? []).reduce((sum, item) => sum + item.balance, 0);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      actions.loadData();
-    }, [actions.loadData]),
-  );
-
-  if (loading || !state) {
+  if (summaryLoading && txLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -51,637 +46,115 @@ export default function DashboardScreen() {
     );
   }
 
-  const monthData = state.months[currentMonth] || { accounts: {} };
-
-  let totalIncome = 0;
-  let totalExpense = 0;
-  let allExpenses: (Expense & { accountId?: number })[] = [];
-
-  Object.entries(monthData.accounts).forEach(([acctId, acct]) => {
-    const id = parseInt(acctId);
-    if (state.activeAccountId !== "all" && state.activeAccountId !== id) return;
-
-    totalIncome += (acct as AccountData).income || 0;
-    (acct as AccountData).expenses.forEach((exp: Expense) => {
-      const val = exp.amount || 0;
-      totalExpense += val;
-      allExpenses.push({ ...exp, accountId: id });
-    });
-  });
-
-  if (serverSummary) {
-    totalIncome = serverSummary.income;
-    totalExpense = serverSummary.expenses;
-  }
-
-  const balance = totalIncome - totalExpense;
-  const savingsRate =
-    totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : "0.0";
-
-  const photoUri = state.userProfile?.photoUri || null;
-
-  const navigateMonth = (direction: number) => {
-    const [year, month] = currentMonth.split("-").map(Number);
-    const date = new Date(year, month - 1, 1);
-    date.setMonth(date.getMonth() + direction);
-    const newMonth = formatMonthKey(date);
-    actions.changeMonth(newMonth);
-  };
-
-  const handleDeleteExpense = (expense: Expense & { accountId?: number }) => {
-    const accountId =
-      expense.accountId ||
-      (state.activeAccountId === "all"
-        ? state.accounts[0].id
-        : state.activeAccountId);
-    actions.deleteExpense(expense.id, accountId);
-  };
-
-  const handleEditExpense = (expense: Expense & { accountId?: number }) => {
-    const accountId =
-      expense.accountId ||
-      (state.activeAccountId === "all"
-        ? state.accounts[0].id
-        : state.activeAccountId);
-    router.push({
-      pathname: "/modal",
-      params: {
-        editMode: "true",
-        expenseId: expense.id,
-        accountId: accountId,
-      },
-    });
-  };
-
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <View>
-          <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={() => router.push("/profile")}
-          >
-            <LinearGradient
-              colors={COLORS.gradientPrimary}
-              style={styles.profileGradient}
-            >
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.profileImage} />
-              ) : (
-                <Ionicons name="person" size={60} color={COLORS.primary} />
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.greetingText}>
-          {state?.userProfile?.name
-            ? `Hello, ${state.userProfile.name.split(" ")[0]}!`
-            : "Guest,"}
-        </Text>
-      </View>
-      <View style={styles.brandTitle}>
-        <Image
-          source={require(`../../../assets/images/vridhi_icon.jpg`)}
-          style={styles.brandIcon}
-        />
-        <Text style={styles.brandTitleText}> Welcome to Vridhi</Text>
-      </View>
-
-      <View style={styles.monthNavRow}>
-        <TouchableOpacity
-          onPress={() => navigateMonth(-1)}
-          style={styles.monthNavIcon}
-        >
-          <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
-        </TouchableOpacity>
-        <View style={styles.monthDisplay}>
-          <Ionicons
-            name="calendar-outline"
-            size={16}
-            color={COLORS.muted}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.dateText}>{currentMonth}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => navigateMonth(1)}
-          style={styles.monthNavIcon}
-        >
-          <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.accountSelector}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: 20 }}
-        >
-          <TouchableOpacity
-            style={[
-              styles.accountBadge,
-              state.activeAccountId === "all" && styles.accountBadgeActive,
-            ]}
-            onPress={() => actions.switchAccount("all")}
-          >
-            <Text
-              style={[
-                styles.accountBadgeText,
-                state.activeAccountId === "all" &&
-                  styles.accountBadgeTextActive,
-              ]}
-            >
-              All Accounts
-            </Text>
-          </TouchableOpacity>
-          {state.accounts
-            .filter((a) => !a.archived)
-            .map((acct) => (
-              <TouchableOpacity
-                key={acct.id}
-                style={[
-                  styles.accountBadge,
-                  state.activeAccountId === acct.id &&
-                    styles.accountBadgeActive,
-                ]}
-                onPress={() => actions.switchAccount(acct.id)}
-              >
-                <Text
-                  style={[
-                    styles.accountBadgeText,
-                    state.activeAccountId === acct.id &&
-                      styles.accountBadgeTextActive,
-                  ]}
-                >
-                  {acct.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-        </ScrollView>
-      </View>
-    </View>
-  );
-
-  const renderSummaryCards = () => (
-    <View style={styles.summaryContainer}>
-      <LinearGradient
-        colors={COLORS.gradientPrimary}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.mainCard, SHADOWS.large]}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardLabel}>TOTAL BALANCE</Text>
-          <View style={styles.savingsBadge}>
-            <Text style={styles.savingsText}>{savingsRate}% saved</Text>
-          </View>
-        </View>
-        <Text style={styles.cardValue}>
-          {currencySymbol}
-          {balance.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-        <View style={styles.cardFooter}>
-          <View style={styles.footerItem}>
-            <Ionicons
-              name="arrow-up-circle"
-              size={16}
-              color="rgba(255,255,255,0.8)"
-            />
-            <Text style={styles.footerText}>
-              Income: {currencySymbol}
-              {totalIncome.toFixed(0)}
-            </Text>
-          </View>
-          <View style={styles.footerItem}>
-            <Ionicons
-              name="arrow-down-circle"
-              size={16}
-              color="rgba(255,255,255,0.8)"
-            />
-            <Text style={styles.footerText}>
-              Spent: {currencySymbol}
-              {totalExpense.toFixed(0)}
-            </Text>
-          </View>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.miniCardsRow}>
-        <View
-          style={[styles.miniCard, { backgroundColor: COLORS.successLight }]}
-        >
-          <View
-            style={[styles.miniIconBg, { backgroundColor: COLORS.success }]}
-          >
-            <Ionicons name="trending-up" size={16} color="#fff" />
-          </View>
-          <Text style={styles.miniLabel}>Income</Text>
-          <Text style={[styles.miniValue, { color: COLORS.success }]}>
-            +{currencySymbol}
-            {totalIncome.toFixed(0)}
-          </Text>
-        </View>
-        <View
-          style={[styles.miniCard, { backgroundColor: COLORS.dangerLight }]}
-        >
-          <View style={[styles.miniIconBg, { backgroundColor: COLORS.danger }]}>
-            <Ionicons name="trending-down" size={16} color="#fff" />
-          </View>
-          <Text style={styles.miniLabel}>Expenses</Text>
-          <Text style={[styles.miniValue, { color: COLORS.danger }]}>
-            -{currencySymbol}
-            {totalExpense.toFixed(0)}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderExpense = (
-    item: Expense & { accountId?: number },
-    index: number,
-  ) => {
-    const category = item.category?.[0] || "Other";
-    const iconName = CATEGORY_ICONS[category] || "help-circle";
-
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.expenseItem}
-        onPress={() => handleEditExpense(item)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.catIconBg, { backgroundColor: COLORS.bg }]}>
-          <Ionicons name={iconName as any} size={22} color={COLORS.primary} />
-        </View>
-        <View style={styles.expInfo}>
-          <Text style={styles.expTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.expCat}>
-            {category} •{" "}
-            {item.date
-              ? new Date(item.date).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })
-              : "No date"}
-          </Text>
-        </View>
-        <View style={styles.expRight}>
-          <Text style={styles.expAmount}>
-            -{currencySymbol}
-            {item.amount.toFixed(2)}
-          </Text>
-          <TouchableOpacity
-            onPress={() => handleDeleteExpense(item)}
-            style={styles.deleteAction}
-          >
-            <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {renderHeader()}
-        {renderSummaryCards()}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={[...COLORS.gradientPrimary]} style={styles.hero}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.hello}>Hello{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
+              <Text style={styles.heroLabel}>Net cash flow · {bounds.label}</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <Ionicons name="person-circle-outline" size={36} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.heroAmount}>{formatCurrency(cashFlow)}</Text>
+          <Text style={styles.heroSub}>
+            Across {accounts.length} account{accounts.length === 1 ? '' : 's'} · balances {formatCurrency(netWorth)}
+          </Text>
+          <View style={styles.monthNav}>
+            <TouchableOpacity onPress={() => setMonth((value) => shiftMonth(value, -1))}>
+              <Ionicons name="chevron-back" size={22} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.monthLabel}>{bounds.label}</Text>
+            <TouchableOpacity onPress={() => setMonth((value) => shiftMonth(value, 1))}>
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+        <View style={styles.stats}>
+          <Stat label="Income" value={formatCurrency(income)} color={COLORS.success} />
+          <Stat label="Expenses" value={formatCurrency(expenses)} color={COLORS.danger} />
+          <Stat label="Saved" value={`${savingsRate}%`} color={COLORS.primary} />
         </View>
 
-        {serverTransactions.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="document-text-outline"
-              size={64}
-              color={COLORS.muted}
-            />
-            <Text style={styles.emptyText}>No recent transactions found</Text>
-          </View>
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Recent transactions</Text>
+          <TouchableOpacity onPress={() => router.push('/(app)/(tabs)/transactions')}>
+            <Text style={styles.link}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        {transactions.length === 0 ? (
+          <Text style={styles.empty}>No transactions this month. Add one to start tracking.</Text>
         ) : (
-          <View style={styles.listContainer}>
-            {serverTransactions.slice(0, 5).map((transaction) => (
-              <TransactionCard
-                key={transaction.id}
-                transaction={transaction}
-                onPress={() => router.push(`/transactions/${transaction.id}`)}
-              />
-            ))}
-          </View>
+          transactions.map((transaction) => (
+            <TransactionCard
+              key={transaction.id}
+              transaction={transaction}
+              onPress={() => router.push(`/transactions/${transaction.id}`)}
+            />
+          ))
         )}
       </ScrollView>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push("/modal")}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={COLORS.gradientPrimary}
-          style={styles.fabGradient}
-        >
-          <Ionicons name="add" size={32} color="#fff" />
-        </LinearGradient>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/transactions/create')}>
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { padding: SIZES.padding, paddingBottom: 120 },
+  hero: { borderRadius: 24, padding: 20, marginBottom: 16, ...SHADOWS.medium },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  hello: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  heroLabel: { color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+  heroAmount: { color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 16 },
+  heroSub: { color: 'rgba(255,255,255,0.85)', marginTop: 6 },
+  monthNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  monthLabel: { color: '#fff', fontWeight: '700' },
+  stats: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  stat: {
     flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.bg,
-  },
-  header: {
-    paddingHorizontal: SIZES.padding,
-    paddingTop: 10,
-    marginBottom: 20,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    marginBottom: 20,
-    gap: 12,
-  },
-  greetingText: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    fontWeight: "500",
-  },
-  brandTitle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  brandTitleText: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: COLORS.text,
-    letterSpacing: -0.5,
-    paddingBottom: 12,
-  },
-  profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: "hidden",
-    ...SHADOWS.small,
-  },
-  profileGradient: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  monthNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: COLORS.surface,
-    padding: 10,
-    borderRadius: SIZES.radiusMedium,
-    ...SHADOWS.small,
-    marginBottom: 16,
-  },
-  monthNavIcon: {
-    padding: 4,
-  },
-  monthDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dateText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  accountSelector: {
-    flexDirection: "row",
-  },
-  accountBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: SIZES.radiusFull,
-    backgroundColor: COLORS.surface,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "transparent",
-    ...SHADOWS.small,
-  },
-  accountBadgeActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primaryLight,
-  },
-  accountBadgeText: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    fontWeight: "600",
-  },
-  accountBadgeTextActive: {
-    color: "#fff",
-  },
-  summaryContainer: {
-    paddingHorizontal: SIZES.padding,
-    marginBottom: 24,
-  },
-  mainCard: {
-    padding: 24,
-    borderRadius: SIZES.radiusLarge,
-    marginBottom: 16,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  cardLabel: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  savingsBadge: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  savingsText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  cardValue: {
-    color: "#fff",
-    fontSize: 36,
-    fontWeight: "800",
-    marginBottom: 16,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    gap: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    paddingTop: 16,
-  },
-  footerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  footerText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  miniCardsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  miniCard: {
-    width: (width - SIZES.padding * 2 - 12) / 2,
-    padding: 16,
-    borderRadius: SIZES.radiusMedium,
-    ...SHADOWS.small,
-  },
-  miniIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  miniLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  miniValue: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: SIZES.padding,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  seeAllText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  listContainer: {
-    paddingHorizontal: SIZES.padding,
-  },
-  expenseItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     padding: 12,
-    borderRadius: SIZES.radiusMedium,
-    marginBottom: 12,
     ...SHADOWS.small,
   },
-  catIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-  expInfo: {
-    flex: 1,
-  },
-  expTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  expCat: {
-    fontSize: 12,
-    color: COLORS.textLight,
-  },
-  expRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  expAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.danger,
-  },
-  deleteAction: {
-    padding: 4,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    marginTop: 12,
-    color: COLORS.muted,
-    fontSize: 15,
-  },
+  statLabel: { color: COLORS.textLight, fontSize: 12 },
+  statValue: { fontWeight: '800', marginTop: 6, fontSize: 13 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  link: { color: COLORS.primary, fontWeight: '700' },
+  empty: { color: COLORS.textLight, marginBottom: 20 },
   fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    ...SHADOWS.colored(COLORS.primary),
-  },
-  fabGradient: {
-    flex: 1,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  brandIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.medium,
   },
 });

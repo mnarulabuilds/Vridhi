@@ -14,7 +14,7 @@ import {
   SHADOWS,
 } from '@/src/theme';
 
-import { Transaction } from '@/src/api/transactions.api';
+import { categoryLabel, Transaction } from '@/src/api/transactions.api';
 
 import { formatCurrency } from '@/src/utils/currency';
 import { relativeDate } from '@/src/utils/date';
@@ -71,14 +71,11 @@ export default function TransactionCard({
 
   const icon =
     CATEGORY_ICONS[
-      transaction.category
+      categoryLabel(transaction)
     ] ??
     'wallet-outline';
 
-  const prefix =
-    transaction.type === 'EXPENSE'
-      ? '-'
-      : '+';
+  const prefix = transaction.type === 'INCOME' ? '+' : '-';
 
   return (
     <Pressable
@@ -150,9 +147,7 @@ export default function TransactionCard({
               styles.badgeText
             }
           >
-            {
-              transaction.category
-            }
+            {categoryLabel(transaction)}
           </Text>
         </View>
       </View>

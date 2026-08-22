@@ -5,10 +5,9 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
 } from 'class-validator';
-
 import { Type } from 'class-transformer';
-
 import { TransactionType } from '../enum/transaction-type.enum';
 
 export class CreateTransactionDto {
@@ -23,8 +22,13 @@ export class CreateTransactionDto {
   @IsEnum(TransactionType)
   type: TransactionType;
 
+  @ValidateIf((dto: CreateTransactionDto) => dto.type !== TransactionType.TRANSFER)
   @IsString()
-  category: string;
+  categoryId?: string;
+
+  @ValidateIf((dto: CreateTransactionDto) => dto.type === TransactionType.TRANSFER)
+  @IsString()
+  transferToAccountId?: string;
 
   @IsOptional()
   @IsString()
@@ -33,7 +37,6 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   merchant?: string;
-
 
   @IsDateString()
   transactionDate: string;

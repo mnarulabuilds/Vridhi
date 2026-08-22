@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import TransactionSummary from '@/src/components/transactions/TransactionSummary';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
 
+import { categoryLabel } from '@/src/api/transactions.api';
 import { useTransactions } from '@/src/hooks/useTransactions';
 
 import { COLORS } from '@/src/theme';
@@ -43,12 +44,8 @@ export default function TransactionsScreen() {
     useMemo(() => {
       return transactions.filter(t => {
         const matchesSearch =
-          t.title
-            .toLowerCase()
-            .includes(query.toLowerCase()) ||
-          t.category
-            .toLowerCase()
-            .includes(query.toLowerCase()) ||
+            t.title.toLowerCase().includes(query.toLowerCase()) ||
+            categoryLabel(t).toLowerCase().includes(query.toLowerCase()) ||
           t.merchant
             ?.toLowerCase()
             .includes(query.toLowerCase());

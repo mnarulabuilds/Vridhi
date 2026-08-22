@@ -15,94 +15,98 @@ enum AccountType {
   INVESTMENT
 }
 
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
 
-  accounts     Account[]
-  categories   Category[]
-  budgets      Budget[]
+  accounts       Account[]
+  categories     Category[]
+  budgets        Budget[]
+  refreshTokens  RefreshToken[]
+  conversations  AiConversation[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
 model Account {
-  id              String      @id @default(cuid())
+  id             String      @id @default(cuid())
+  name           String
+  type           AccountType
+  openingBalance Decimal     @db.Decimal(15, 2)
+  currency       String      @default("INR")
+  icon           String?
+  color          String?
+  isArchived     Boolean     @default(false)
+  userId         String
 
-  name            String
+  transactions        Transaction[]
+  incomingTransfers   Transaction[] @relation("TransferDestination")
 
-  type            AccountType
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  openingBalance  Decimal     @db.Decimal(15,2)
-
-  currency        String      @default("INR")
-
-  icon            String?
-
-  color           String?
-
-  isArchived      Boolean     @default(false)
-
-  userId          String
-
-  transactions Transaction[]
-
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt       DateTime    @default(now())
-
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
-
   @@map("accounts")
 }
 
 model Transaction {
-  id              String   @id @default(cuid())
+  id                   String          @id @default(cuid())
+  title                String
+  amount               Decimal         @db.Decimal(15, 2)
+  type                 TransactionType
+  notes                String?
+  merchant             String?
+  transactionDate      DateTime
+  accountId            String
+  categoryId           String?
+  transferToAccountId  String?
+  importHash           String?
 
-  title           String
+  account           Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transferToAccount Account?  @relation("TransferDestination", fields: [transferToAccountId], references: [id], onDelete: SetNull)
+  category          Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  amount          Decimal  @db.Decimal(15,2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  type            TransactionType
-
-  category        String
-
-  notes           String?
-
-  merchant        String?
-
-  transactionDate DateTime
-
-  accountId       String
-
-  account         Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  createdAt       DateTime @default(now())
-
-  updatedAt       DateTime @updatedAt
-
-  @@index([accountId])
-
+  @@unique([accountId, importHash])
+  @@index([accountId, transactionDate])
+  @@index([categoryId])
+  @@index([transferToAccountId])
   @@map("transactions")
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String
-  type      TransactionType
-  color     String?
-  icon      String?
-  isArchived Boolean @default(false)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  budgets   Budget[]
+  id         String          @id @default(cuid())
+  name       String
+  type       TransactionType
+  color      String?
+  icon       String?
+  isArchived Boolean         @default(false)
+  userId     String
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgets      Budget[]
+  transactions Transaction[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -113,23 +117,61 @@ model Category {
 
 model Budget {
   id          String   @id @default(cuid())
-  amount      Decimal  @db.Decimal(15,2)
+  amount      Decimal  @db.Decimal(15, 2)
   periodStart DateTime
   periodEnd   DateTime
   userId      String
   categoryId  String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, categoryId, periodStart])
   @@index([userId, periodStart])
   @@map("budgets")
 }
 
-enum TransactionType {
-  INCOME
-  EXPENSE
-  TRANSFER
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AiConversation {
+  id     String @id @default(cuid())
+  title  String?
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages AiMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String        @id @default(cuid())
+  role           AiMessageRole
+  content        String
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@map("ai_messages")
 }

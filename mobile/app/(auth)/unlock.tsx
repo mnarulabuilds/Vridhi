@@ -30,12 +30,10 @@ export default function UnlockScreen() {
 
     if (!biometrics) {
       setUnlocked(true);
-      // router.replace('/(tabs)');
       return;
     }
 
     if (isUnlocked) {
-      // router.replace('/(tabs)');
       return;
     }
 
