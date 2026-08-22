@@ -2,7 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { currentBalance, LedgerEntry } from '../../common/money/ledger';
+import { LedgerEntry } from '../../common/money/ledger';
+import { positionForAccount } from '../../common/money/net-worth';
 
 @Injectable()
 export class AccountsService {
@@ -10,18 +11,27 @@ export class AccountsService {
 
   private withCurrentBalance(account: {
     id: string;
+    type: string;
     openingBalance: unknown;
+    createdAt?: Date;
     transactions: LedgerEntry[];
     incomingTransfers: LedgerEntry[];
   }) {
     const { transactions, incomingTransfers, ...accountData } = account;
+    const entries = [...transactions, ...incomingTransfers];
+    const position = positionForAccount({
+      id: account.id,
+      type: account.type,
+      openingBalance: Number(account.openingBalance),
+      createdAt: account.createdAt,
+      entries,
+    });
     return {
       ...accountData,
-      currentBalance: currentBalance(
-        Number(account.openingBalance),
-        [...transactions, ...incomingTransfers],
-        account.id,
-      ),
+      currentBalance: position.displayBalance,
+      ledgerBalance: position.ledgerBalance,
+      kind: position.kind,
+      netWorthContribution: position.contribution,
     };
   }
 

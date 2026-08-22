@@ -35,9 +35,10 @@ describe('classifyIntent', () => {
     expect(classifyIntent('Is anything unusual this month?', NOW).kind).toBe('insights');
   });
 
-  it('detects budgets and balances', () => {
+  it('detects budgets, balances, and net worth', () => {
     expect(classifyIntent('Am I over budget?', NOW).kind).toBe('budgets');
     expect(classifyIntent('What are my account balances?', NOW).kind).toBe('balances');
+    expect(classifyIntent("What's my net worth?", NOW).kind).toBe('net_worth');
   });
 
   it('detects recent transactions', () => {

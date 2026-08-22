@@ -18,6 +18,7 @@ export function useTransactions(query?: TransactionListQuery) {
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
     queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     queryClient.invalidateQueries({ queryKey: ['insights'] });
+    queryClient.invalidateQueries({ queryKey: ['net-worth'] });
   };
 
   const createMutation = useMutation({

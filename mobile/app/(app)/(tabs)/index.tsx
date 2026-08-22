@@ -14,13 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, SIZES } from '@/src/theme';
 import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
 import { useTransactions } from '@/src/hooks/useTransactions';
-import { useAccounts } from '@/src/hooks/useAccounts';
 import { useAuth } from '@/src/providers/auth-provider';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
 import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds, shiftMonth } from '@/src/utils/month';
 import { useInsights } from '@/src/hooks/useInsights';
+import { useNetWorth } from '@/src/hooks/useNetWorth';
 import InsightNoticeCard from '@/src/components/insights/InsightNoticeCard';
+import NetWorthSpark from '@/src/components/insights/NetWorthSpark';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -33,14 +34,15 @@ export default function DashboardScreen() {
     limit: 8,
   });
   const { data: insights } = useInsights(bounds.from);
+  const { data: worth } = useNetWorth(bounds.to);
   const notices = (insights?.notices ?? []).filter((notice) => notice.kind !== 'info').slice(0, 2);
-  const { accounts } = useAccounts();
 
   const income = summary?.income ?? 0;
   const expenses = summary?.expenses ?? 0;
   const cashFlow = summary?.netCashFlow ?? income - expenses;
-  const savingsRate = ((summary?.savingsRate ?? 0) * 100).toFixed(1);
-  const netWorth = (summary?.balances ?? []).reduce((sum, item) => sum + item.balance, 0);
+  const netWorth = worth?.netWorth ?? 0;
+  const assets = worth?.assets ?? 0;
+  const liabilities = worth?.liabilities ?? 0;
 
   if (summaryLoading && txLoading) {
     return (
@@ -57,16 +59,17 @@ export default function DashboardScreen() {
           <View style={styles.heroTop}>
             <View>
               <Text style={styles.hello}>Hello{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
-              <Text style={styles.heroLabel}>Net cash flow · {bounds.label}</Text>
+              <Text style={styles.heroLabel}>Net worth · {bounds.label}</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/profile')}>
               <Ionicons name="person-circle-outline" size={36} color="#fff" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.heroAmount}>{formatCurrency(cashFlow)}</Text>
+          <Text style={styles.heroAmount}>{formatCurrency(netWorth)}</Text>
           <Text style={styles.heroSub}>
-            Across {accounts.length} account{accounts.length === 1 ? '' : 's'} · balances {formatCurrency(netWorth)}
+            Assets {formatCurrency(assets)} · liabilities {formatCurrency(liabilities)}
           </Text>
+          <NetWorthSpark history={worth?.history ?? []} />
           <View style={styles.monthNav}>
             <TouchableOpacity onPress={() => setMonth((value) => shiftMonth(value, -1))}>
               <Ionicons name="chevron-back" size={22} color="#fff" />
@@ -81,7 +84,7 @@ export default function DashboardScreen() {
         <View style={styles.stats}>
           <Stat label="Income" value={formatCurrency(income)} color={COLORS.success} />
           <Stat label="Expenses" value={formatCurrency(expenses)} color={COLORS.danger} />
-          <Stat label="Saved" value={`${savingsRate}%`} color={COLORS.primary} />
+          <Stat label="Cash flow" value={formatCurrency(cashFlow)} color={COLORS.primary} />
         </View>
 
         {notices.length > 0 ? (

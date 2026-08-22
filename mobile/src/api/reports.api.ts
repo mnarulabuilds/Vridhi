@@ -24,6 +24,8 @@ export const ReportsApi = {
     (await api.get<FinancialSummary>('/reports/summary', { params: { from, to } })).data,
   insights: async (asOf: string) =>
     (await api.get<InsightsReport>('/reports/insights', { params: { asOf } })).data,
+  netWorth: async (asOf: string) =>
+    (await api.get<NetWorthReport>('/reports/net-worth', { params: { asOf } })).data,
 };
 
 export interface InsightNotice {
@@ -40,4 +42,21 @@ export interface InsightsReport {
   recurring: Array<{ label: string; categoryName: string | null; typicalAmount: number; monthsSeen: number }>;
   unusualCategories: Array<{ categoryName: string; thisMonth: number; average: number; ratio: number }>;
   savingsRateByMonth: Array<{ month: string; income: number; expenses: number; savingsRate: number }>;
+}
+
+export interface NetWorthReport {
+  asOf: string;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  byAccount: Array<{
+    accountId: string;
+    name: string;
+    type: string;
+    currency: string;
+    kind: 'asset' | 'liability';
+    displayBalance: number;
+    contribution: number;
+  }>;
+  history: Array<{ month: string; assets: number; liabilities: number; netWorth: number }>;
 }

@@ -233,10 +233,10 @@ Postgres stores users, accounts, transactions, categories, budgets, refresh toke
 
 ### Phase 2 — Wealth
 
-- [ ] Assets
-- [ ] Liabilities
-- [ ] Net worth calculation
-- [ ] Net worth history
+- [x] Assets
+- [x] Liabilities
+- [x] Net worth calculation
+- [x] Net worth history
 - [ ] Wealth dashboard
 
 ### Phase 3 — Portfolio
@@ -267,8 +267,8 @@ Postgres stores users, accounts, transactions, categories, budgets, refresh toke
 
 ### Phase 6 — Financial Intelligence
 
-- [ ] Spending insights
-- [ ] Recurring expense detection
+- [x] Spending insights
+- [x] Recurring expense detection
 - [ ] Financial health indicators
 - [ ] Portfolio insights
 - [ ] Intelligent financial explanations

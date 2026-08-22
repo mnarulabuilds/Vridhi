@@ -21,10 +21,11 @@ import AppSelect from '@/src/components/form/AppSelect';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 
 import {
+  ACCOUNT_TYPE_OPTIONS,
   accountSchema,
   AccountFormSchema as AccountFormValues,
-  ACCOUNT_TYPES,
   CURRENCIES,
+  LIABILITY_ACCOUNT_TYPES,
 } from '@/src/validation/account.schema';
 import { confirmAlert } from '@/src/utils/confirmAlert';
 import IconPicker from './IconPicker';
@@ -52,6 +53,7 @@ export default function AccountForm({
   const {
     control,
     handleSubmit,
+    watch,
     formState: {
       isSubmitting,
     },
@@ -74,6 +76,9 @@ export default function AccountForm({
       ...defaultValues,
     },
   });
+
+  const selectedType = watch('type');
+  const isLiability = LIABILITY_ACCOUNT_TYPES.includes(selectedType);
 
   async function submit(
     values: AccountFormValues,
@@ -137,21 +142,13 @@ export default function AccountForm({
         name="type"
         label="Account Type"
         placeholder="Select account type"
-        data={ACCOUNT_TYPES.map(
-          (type) => ({
-            label: type.replaceAll(
-              '_',
-              ' ',
-            ),
-            value: type,
-          }),
-        )}
+        data={ACCOUNT_TYPE_OPTIONS}
       />
 
       <AppInput
         control={control}
         name="openingBalance"
-        label="Opening Balance"
+        label={isLiability ? 'Amount currently owed' : 'Opening Balance'}
         keyboardType="numeric"
         placeholder="0"
       />

@@ -3,6 +3,7 @@ export type IntentKind =
   | 'insights'
   | 'budgets'
   | 'balances'
+  | 'net_worth'
   | 'category_spend'
   | 'recent'
   | 'unknown';
@@ -128,8 +129,12 @@ export function classifyIntent(message: string, now = new Date()): ClassifiedInt
     return { kind: 'budgets', ...base };
   }
 
+  if (/\b(net worth|networth|assets? (?:and|vs\.?|versus) liabilities)\b/i.test(text)) {
+    return { kind: 'net_worth', ...base };
+  }
+
   if (
-    /\b(balances?|how much do i have|net worth|across accounts|account totals?)\b/i.test(text)
+    /\b(balances?|how much do i have|across accounts|account totals?)\b/i.test(text)
   ) {
     return { kind: 'balances', ...base };
   }

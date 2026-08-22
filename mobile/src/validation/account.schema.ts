@@ -4,10 +4,25 @@ export const ACCOUNT_TYPES = [
   'CASH',
   'SAVINGS',
   'CURRENT',
-  'CREDIT_CARD',
   'WALLET',
   'INVESTMENT',
+  'OTHER_ASSET',
+  'CREDIT_CARD',
+  'LOAN',
 ] as const;
+
+export const ACCOUNT_TYPE_OPTIONS: Array<{ label: string; value: (typeof ACCOUNT_TYPES)[number] }> = [
+  { label: 'Cash', value: 'CASH' },
+  { label: 'Savings', value: 'SAVINGS' },
+  { label: 'Current / checking', value: 'CURRENT' },
+  { label: 'Wallet', value: 'WALLET' },
+  { label: 'Investment', value: 'INVESTMENT' },
+  { label: 'Gold / other asset', value: 'OTHER_ASSET' },
+  { label: 'Credit card', value: 'CREDIT_CARD' },
+  { label: 'Loan', value: 'LOAN' },
+];
+
+export const LIABILITY_ACCOUNT_TYPES: readonly string[] = ['CREDIT_CARD', 'LOAN'];
 
 export const CURRENCIES = [
   'INR',

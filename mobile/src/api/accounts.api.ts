@@ -6,15 +6,22 @@ export type AccountType =
   | 'CURRENT'
   | 'CREDIT_CARD'
   | 'WALLET'
-  | 'INVESTMENT';
+  | 'INVESTMENT'
+  | 'LOAN'
+  | 'OTHER_ASSET';
+
+export type AccountKind = 'asset' | 'liability';
 
 export interface Account {
   id: string;
   name: string;
   type: AccountType;
   openingBalance: number;
-  /** Present on the current API; optional for compatibility with an older server. */
+  /** Display balance: amount held for assets, amount owed for liabilities. */
   currentBalance?: number;
+  ledgerBalance?: number;
+  kind?: AccountKind;
+  netWorthContribution?: number;
   currency: string;
   icon?: string | null;
   color?: string | null;

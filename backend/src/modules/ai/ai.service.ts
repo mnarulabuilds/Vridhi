@@ -15,6 +15,7 @@ import {
   renderBudgets,
   renderCategorySpend,
   renderInsights,
+  renderNetWorth,
   renderRecent,
   renderSummary,
   type SummarySnapshot,
@@ -33,7 +34,8 @@ Rules:
 - Transfers are not income or expenses.
 - Prefer concise answers with INR formatting (e.g. ₹1,250.00).
 - Mention the date range you used when summarizing.
-- When the user asks what changed, what is unusual, or what bills repeat, call get_insights.`;
+- When the user asks what changed, what is unusual, or what bills repeat, call get_insights.
+- When the user asks net worth, assets, or liabilities, call get_net_worth.`;
 
 const TOOLS = [
   {
@@ -102,6 +104,20 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_net_worth',
+      description:
+        'Assets, liabilities, net worth, per-account contribution, and a 12-month history. Pass asOf as an ISO date.',
+      parameters: {
+        type: 'object',
+        properties: {
+          asOf: { type: 'string', description: 'ISO date to value the books on' },
+        },
+      },
+    },
+  },
 ];
 
 @Injectable()
@@ -155,6 +171,8 @@ export class AiService {
         );
       case 'get_insights':
         return this.reporting.insights(userId, args.asOf ? String(args.asOf) : undefined);
+      case 'get_net_worth':
+        return this.reporting.netWorth(userId, args.asOf ? String(args.asOf) : undefined);
       default:
         return { error: `Unknown tool ${name}` };
     }
@@ -208,6 +226,11 @@ export class AiService {
         const insights = await this.reporting.insights(userId, intent.asOf);
         sources.push('get_insights');
         return { text: renderInsights(intent.periodLabel, insights.notices), sources };
+      }
+      case 'net_worth': {
+        const report = await this.reporting.netWorth(userId, intent.to);
+        sources.push('get_net_worth');
+        return { text: renderNetWorth(intent.periodLabel, report, currency), sources };
       }
       case 'recent': {
         const page = await this.transactions.findAll(userId, {

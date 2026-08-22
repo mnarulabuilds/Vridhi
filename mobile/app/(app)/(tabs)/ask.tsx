@@ -22,9 +22,9 @@ interface ChatItem {
 
 const SUGGESTIONS = [
   'How much did I spend this month?',
+  "What's my net worth?",
   'What bills repeat?',
   'Is anything unusual this month?',
-  "What's my savings rate?",
   'Account balances',
 ];
 
@@ -142,7 +142,7 @@ export default function AskScreen() {
           {messages.length === 0 ? (
             <View style={styles.emptyBlock}>
               <Text style={styles.empty}>
-                Spending, savings rate, budgets, balances, and recurring bills are answered from your ledger. Open chat needs Ollama or an API key.
+                Spending, net worth, budgets, balances, and recurring bills are answered from your ledger. Open chat needs Ollama or an API key.
               </Text>
               <View style={styles.suggestions}>
                 {SUGGESTIONS.map((suggestion) => (

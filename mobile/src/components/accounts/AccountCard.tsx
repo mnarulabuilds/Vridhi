@@ -107,7 +107,7 @@ export default function AccountCard({
           style={styles.balanceSection}
         >
           <Text style={styles.label}>
-            Current Balance
+            {account.kind === 'liability' ? 'Amount owed' : 'Current Balance'}
           </Text>
 
           <Text style={styles.balance}>

@@ -9,6 +9,7 @@ import {
   monthKey,
   type LedgerTxn,
 } from '../../common/money/insights';
+import { summarizeNetWorth, type DatedLedgerEntry } from '../../common/money/net-worth';
 
 @Injectable()
 export class ReportingService {
@@ -149,6 +150,65 @@ export class ReportingService {
       recurring,
       unusualCategories: unusual,
       savingsRateByMonth,
+    };
+  }
+
+  async netWorth(userId: string, asOf?: string) {
+    const focus = asOf ? new Date(asOf) : new Date();
+    if (Number.isNaN(focus.valueOf())) {
+      throw new BadRequestException('Provide a valid asOf date');
+    }
+    const accounts = await this.prisma.account.findMany({
+      where: { userId, isArchived: false },
+      include: {
+        transactions: {
+          select: {
+            amount: true,
+            type: true,
+            accountId: true,
+            transferToAccountId: true,
+            transactionDate: true,
+          },
+        },
+        incomingTransfers: {
+          select: {
+            amount: true,
+            type: true,
+            accountId: true,
+            transferToAccountId: true,
+            transactionDate: true,
+          },
+        },
+      },
+    });
+    const mapped = accounts.map((account) => ({
+      id: account.id,
+      name: account.name,
+      type: account.type,
+      currency: account.currency,
+      openingBalance: account.openingBalance,
+      createdAt: account.createdAt,
+      entries: [...account.transactions, ...account.incomingTransfers] as DatedLedgerEntry[],
+    }));
+    const current = summarizeNetWorth(mapped, focus);
+    const history: Array<{ month: string; assets: number; liabilities: number; netWorth: number }> = [];
+    for (let offset = 11; offset >= 0; offset -= 1) {
+      const end = new Date(focus.getFullYear(), focus.getMonth() - offset + 1, 0, 23, 59, 59, 999);
+      const snap = summarizeNetWorth(mapped, end);
+      history.push({
+        month: monthKey(end),
+        assets: snap.assets,
+        liabilities: snap.liabilities,
+        netWorth: snap.netWorth,
+      });
+    }
+    return {
+      asOf: focus,
+      assets: current.assets,
+      liabilities: current.liabilities,
+      netWorth: current.netWorth,
+      byAccount: current.byAccount,
+      history,
     };
   }
 }

@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "AccountType" ADD VALUE 'LOAN';
+ALTER TYPE "AccountType" ADD VALUE 'OTHER_ASSET';

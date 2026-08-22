@@ -17,6 +17,12 @@ const ACCOUNTS_QUERY_KEY = ['accounts'];
 export function useAccounts() {
   const queryClient = useQueryClient();
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: ['net-worth'] });
+    queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+  };
+
   /**
    * Fetch accounts
    */
@@ -38,11 +44,7 @@ export function useAccounts() {
     mutationFn: (payload: CreateAccountRequest) =>
       AccountsService.createAccount(payload),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ACCOUNTS_QUERY_KEY,
-      });
-    },
+    onSuccess: invalidate,
   });
 
   /**
@@ -61,11 +63,7 @@ export function useAccounts() {
         payload,
       ),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ACCOUNTS_QUERY_KEY,
-      });
-    },
+    onSuccess: invalidate,
   });
 
   /**
@@ -75,11 +73,7 @@ export function useAccounts() {
     mutationFn: (id: string) =>
       AccountsService.archiveAccount(id),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ACCOUNTS_QUERY_KEY,
-      });
-    },
+    onSuccess: invalidate,
   });
 
   return {

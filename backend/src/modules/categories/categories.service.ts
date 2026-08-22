@@ -6,10 +6,10 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(userId: string) {
+  findAll(userId: string, includeArchived = false) {
     return this.prisma.category.findMany({
-      where: { userId, isArchived: false },
-      orderBy: [{ type: 'asc' }, { name: 'asc' }],
+      where: { userId, ...(includeArchived ? {} : { isArchived: false }) },
+      orderBy: [{ isArchived: 'asc' }, { type: 'asc' }, { name: 'asc' }],
     });
   }
 
@@ -26,5 +26,11 @@ export class CategoriesService {
     const category = await this.prisma.category.findFirst({ where: { id, userId, isArchived: false } });
     if (!category) throw new NotFoundException('Category not found');
     return this.prisma.category.update({ where: { id }, data: { isArchived: true } });
+  }
+
+  async unarchive(userId: string, id: string) {
+    const category = await this.prisma.category.findFirst({ where: { id, userId, isArchived: true } });
+    if (!category) throw new NotFoundException('Archived category not found');
+    return this.prisma.category.update({ where: { id }, data: { isArchived: false } });
   }
 }

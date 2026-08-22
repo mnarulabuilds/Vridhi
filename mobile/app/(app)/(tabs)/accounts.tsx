@@ -37,18 +37,14 @@ export default function AccountsScreen() {
     account => !account.isArchived,
   );
 
-  const totalAssets = activeAccounts.reduce((acc, account) => {
-    const currency = account.currency;
-    const balance = Number(
-      account.currentBalance ?? account.openingBalance ?? 0,
-    );
-
-    acc[currency] =
-      (acc[currency] ?? 0) +
-      (Number.isFinite(balance) ? balance : 0);
-
-    return acc;
-  }, {} as Record<string, number>);
+  const assets = activeAccounts
+    .filter((account) => account.kind !== 'liability')
+    .reduce((sum, account) => sum + Number(account.currentBalance ?? account.openingBalance ?? 0), 0);
+  const liabilities = activeAccounts
+    .filter((account) => account.kind === 'liability')
+    .reduce((sum, account) => sum + Number(account.currentBalance ?? 0), 0);
+  const netWorth = assets - liabilities;
+  const currency = activeAccounts[0]?.currency ?? 'INR';
 
   if (loading) {
     return (
@@ -76,7 +72,10 @@ export default function AccountsScreen() {
         ListHeaderComponent={() => (
           <>
             <AccountsSummary
-              totalAssets={totalAssets}
+              netWorth={netWorth}
+              assets={assets}
+              liabilities={liabilities}
+              currency={currency}
               accountCount={activeAccounts.length}
             />
 
@@ -85,8 +84,7 @@ export default function AccountsScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Manage your bank accounts,
-              wallets and investments.
+              Manage bank accounts, wallets, loans, and other assets.
             </Text>
           </>
         )}

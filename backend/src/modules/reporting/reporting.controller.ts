@@ -25,4 +25,9 @@ export class ReportingController {
   insights(@CurrentUser() user: CurrentUserData, @Query('asOf') asOf?: string) {
     return this.reporting.insights(user.id, asOf);
   }
+
+  @Get('net-worth')
+  netWorth(@CurrentUser() user: CurrentUserData, @Query('asOf') asOf?: string) {
+    return this.reporting.netWorth(user.id, asOf);
+  }
 }

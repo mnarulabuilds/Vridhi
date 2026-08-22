@@ -43,7 +43,7 @@ npm start
 
 - Register / log in (JWT stored in SecureStore; tokens refresh automatically)
 - Create accounts and categorized income, expenses, and transfers
-- See this month's cash flow, savings rate, and account balances on the dashboard
+- See this month's cash flow, savings rate, net worth, and account balances on the dashboard
 - Set category budgets and review them on Insights
 - Paste a bank CSV in Settings to import transactions (duplicates are skipped)
 - Ask Vridhi questions about **your recorded data** (numbers come from the API, not guesses). Tap a suggested question, or type freely if a model is configured

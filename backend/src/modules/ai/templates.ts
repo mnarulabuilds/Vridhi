@@ -185,5 +185,29 @@ export function renderRecent(periodLabel: string, items: LedgerItem[], currency 
   return `Recent in ${periodLabel}: ${lines.join('; ')}.`;
 }
 
+export function renderNetWorth(
+  periodLabel: string,
+  report: {
+    assets: number;
+    liabilities: number;
+    netWorth: number;
+    byAccount?: Array<{ name: string; kind: string; displayBalance: number }>;
+  },
+  currency = 'INR',
+) {
+  const lines = [
+    `Net worth as of ${periodLabel}: ${formatMoney(report.netWorth, currency)}.`,
+    `Assets ${formatMoney(report.assets, currency)} · liabilities ${formatMoney(report.liabilities, currency)}.`,
+  ];
+  const debts = (report.byAccount ?? []).filter((row) => row.kind === 'liability' && row.displayBalance);
+  if (debts.length) {
+    lines.push(
+      `Owed: ${debts.map((row) => `${row.name} ${formatMoney(row.displayBalance, currency)}`).join(', ')}.`,
+    );
+  }
+  return lines.join(' ');
+}
+
 export const FALLBACK_HELP =
-  'I can answer from your recorded books without a language model: this month’s spending, savings rate, account balances, budgets, recent transactions, recurring bills, and unusual spend. For open chat, run Ollama locally (AI_PROVIDER=ollama) or set OPENAI_API_KEY.';
+  'I can answer from your recorded books without a language model: this month’s spending, savings rate, net worth, account balances, budgets, recent transactions, recurring bills, and unusual spend. For open chat, run Ollama locally (AI_PROVIDER=ollama) or set OPENAI_API_KEY.';
+

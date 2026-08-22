@@ -48,7 +48,7 @@ function guessMapping(header: string[]) {
 export default function SettingsScreen() {
   const { logout, user } = useAuth();
   const { biometrics, toggleBiometrics } = useBiometrics();
-  const { categories, createCategory, archiveCategory } = useCategories();
+  const { categories, createCategory, archiveCategory, unarchiveCategory } = useCategories(true);
   const { accounts } = useAccounts();
   const bounds = monthBounds(new Date());
   const { budgets, upsertBudget, saving } = useBudgets(bounds.periodStart);
@@ -60,7 +60,15 @@ export default function SettingsScreen() {
   const [budgetDraft, setBudgetDraft] = useState<Record<string, string>>({});
 
   const expenseCategories = useMemo(
-    () => categories.filter((category) => category.type === 'EXPENSE'),
+    () => categories.filter((category) => category.type === 'EXPENSE' && !category.isArchived),
+    [categories],
+  );
+  const activeCategories = useMemo(
+    () => categories.filter((category) => !category.isArchived),
+    [categories],
+  );
+  const archivedCategories = useMemo(
+    () => categories.filter((category) => category.isArchived),
     [categories],
   );
 
@@ -158,7 +166,7 @@ export default function SettingsScreen() {
           />
           <PrimaryButton title="Add" onPress={addCategory} />
         </View>
-        {categories.map((category) => (
+        {activeCategories.map((category) => (
           <View key={category.id} style={styles.row}>
             <Text style={styles.label}>
               {category.name} · {categoryTypeLabel(category.type)}
@@ -168,6 +176,22 @@ export default function SettingsScreen() {
             </Text>
           </View>
         ))}
+        {archivedCategories.length > 0 ? (
+          <>
+            <Text style={styles.section}>Archived categories</Text>
+            <Text style={styles.muted}>Restore a category to use it on new transactions again.</Text>
+            {archivedCategories.map((category) => (
+              <View key={category.id} style={styles.row}>
+                <Text style={styles.archivedLabel}>
+                  {category.name} · {categoryTypeLabel(category.type)}
+                </Text>
+                <Text style={styles.restore} onPress={() => unarchiveCategory(category.id)}>
+                  Restore
+                </Text>
+              </View>
+            ))}
+          </>
+        ) : null}
 
         <Text style={styles.section}>Monthly budgets</Text>
         {expenseCategories.map((category) => {
@@ -223,7 +247,9 @@ const styles = StyleSheet.create({
   section: { fontSize: 18, fontWeight: '700', marginTop: 24, marginBottom: 12, color: COLORS.text },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   label: { color: COLORS.text, flex: 1 },
+  archivedLabel: { color: COLORS.textLight, flex: 1 },
   link: { color: COLORS.danger, fontWeight: '700' },
+  restore: { color: COLORS.primary, fontWeight: '700' },
   inline: { gap: 10, marginBottom: 12 },
   input: {
     backgroundColor: COLORS.surface,

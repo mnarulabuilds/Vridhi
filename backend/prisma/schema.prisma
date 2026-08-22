@@ -13,6 +13,8 @@ enum AccountType {
   CREDIT_CARD
   WALLET
   INVESTMENT
+  LOAN
+  OTHER_ASSET
 }
 
 enum TransactionType {
