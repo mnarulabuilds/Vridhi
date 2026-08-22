@@ -36,6 +36,22 @@ class AuthApi {
     const { data } = await api.get<AuthenticatedUser>('/auth/me');
     return data;
   }
+
+  async changePassword(payload: { currentPassword: string; newPassword: string }) {
+    await api.post('/auth/change-password', payload);
+  }
+
+  async forgotPassword(email: string) {
+    const { data } = await api.post<{ accepted: boolean; debugResetToken?: string }>(
+      '/auth/forgot-password',
+      { email },
+    );
+    return data;
+  }
+
+  async resetPassword(payload: { token: string; newPassword: string }) {
+    await api.post('/auth/reset-password', payload);
+  }
 }
 
 export default new AuthApi();

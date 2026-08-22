@@ -23,8 +23,14 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd && origins.length === 0) {
+    throw new Error('CORS_ORIGINS must be set in production');
+  }
   app.enableCors({
-    origin: origins.length ? origins : true,
+    origin: origins.length
+      ? origins
+      : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:8082'],
     credentials: true,
   });
 

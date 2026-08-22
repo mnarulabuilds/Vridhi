@@ -25,6 +25,24 @@ export const ImportsApi = {
 };
 
 export const AiApi = {
+  listConversations: async () =>
+    (
+      await api.get<
+        Array<{
+          id: string;
+          title: string | null;
+          updatedAt: string;
+          messages: Array<{ role: 'USER' | 'ASSISTANT'; content: string }>;
+        }>
+      >('/ai/conversations')
+    ).data,
+  getConversation: async (id: string) =>
+    (
+      await api.get<{
+        id: string;
+        messages: Array<{ role: 'USER' | 'ASSISTANT'; content: string }>;
+      }>(`/ai/conversations/${id}`)
+    ).data,
   chat: async (payload: {
     conversationId?: string;
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -33,6 +51,7 @@ export const AiApi = {
       await api.post<{
         conversationId: string;
         message: { role: 'assistant'; content: string };
+        sources?: string[];
         disclaimer: string;
       }>('/ai/chat', payload)
     ).data,

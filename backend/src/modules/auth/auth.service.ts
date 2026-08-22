@@ -1,13 +1,15 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../users/users.service';
+import { UsersService, toPublicProfile } from '../users/users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -17,6 +19,8 @@ const BCRYPT_SALT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -28,7 +32,14 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  private async createAuthResponse(user: { id: string; name: string; email: string }) {
+  private async createAuthResponse(user: {
+    id: string;
+    name: string;
+    email: string;
+    preferredCurrency: string;
+    timezone: string;
+    locale: string;
+  }) {
     const payload: JwtPayload = { sub: user.id, email: user.email };
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = randomBytes(48).toString('hex');
@@ -46,26 +57,26 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: toPublicProfile(user),
     };
   }
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.usersService.findByEmail(dto.email);
+        const existingUser = await this.usersService.findByEmail(dto.email.trim().toLowerCase());
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
-    const user = await this.usersService.create({
-      name: dto.name,
-      email: dto.email,
-      passwordHash,
-    });
+        const user = await this.usersService.create({
+            name: dto.name,
+            email: dto.email.trim().toLowerCase(),
+            passwordHash,
+        });
     return this.createAuthResponse(user);
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+        const user = await this.usersService.findByEmail(dto.email.trim().toLowerCase());
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -108,6 +119,78 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return { id: user.id, name: user.name, email: user.email };
+    return toPublicProfile(user);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+    const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!matches) throw new UnauthorizedException('Current password is incorrect');
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('New password must be different');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS) },
+    });
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  async logoutAll(userId: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email.trim().toLowerCase());
+    const accepted = { accepted: true as const };
+    if (!user) {
+      return accepted;
+    }
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: this.hashRefreshToken(token),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    if (this.configService.get('NODE_ENV') !== 'production') {
+      this.logger.warn(`Password reset token for ${user.email}: ${token}`);
+      return { ...accepted, debugResetToken: token };
+    }
+    return accepted;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const stored = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: this.hashRefreshToken(token) },
+    });
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: stored.userId },
+        data: { passwordHash: await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS) },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: stored.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: stored.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { success: true };
   }
 }

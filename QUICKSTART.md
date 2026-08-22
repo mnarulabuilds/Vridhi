@@ -21,7 +21,7 @@ npm run start:dev
 
 The API listens on `http://localhost:3001`. Health: `GET /health`. OpenAPI: `http://localhost:3001/api/docs`.
 
-Set `OPENAI_API_KEY` in `backend/.env` to enable the Ask assistant.
+Set `OPENAI_API_KEY` in `backend/.env` to enable the Ask assistant. Set `CORS_ORIGINS` to your Expo URL in production (required). Password reset shows a debug token only when `NODE_ENV` is not `production`.
 
 ## Mobile
 

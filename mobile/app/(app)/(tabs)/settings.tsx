@@ -11,6 +11,8 @@ import PrimaryButton from '@/src/components/form/PrimaryButton';
 import { monthBounds } from '@/src/utils/month';
 import { ImportsApi } from '@/src/api/imports.api';
 import { Switch } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 
 function parseCsv(text: string) {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -73,6 +75,20 @@ export default function SettingsScreen() {
       Alert.alert('Saved', 'Budget updated');
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message ?? 'Could not save budget');
+    }
+  }
+
+  async function pickCsvFile() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/csv', 'text/comma-separated-values', 'text/plain'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      setCsv(content);
+    } catch {
+      Alert.alert('Could not read file', 'Paste the CSV instead.');
     }
   }
 
@@ -154,7 +170,7 @@ export default function SettingsScreen() {
         })}
 
         <Text style={styles.section}>CSV import</Text>
-        <Text style={styles.muted}>Paste a bank CSV with a header row. Duplicates are skipped.</Text>
+        <Text style={styles.muted}>Choose an account, pick a bank CSV or paste it. Duplicates are skipped.</Text>
         {accounts.map((account) => (
           <Text
             key={account.id}
@@ -164,6 +180,7 @@ export default function SettingsScreen() {
             {account.name}
           </Text>
         ))}
+        <PrimaryButton title="Pick CSV file" onPress={pickCsvFile} />
         <TextInput
           style={styles.csv}
           multiline

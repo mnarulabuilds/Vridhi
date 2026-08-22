@@ -1,8 +1,23 @@
-import { UsersService } from './users.service';
+import { toPublicProfile } from './users.service';
 
-describe('UsersService', () => {
-  it('should be defined', () => {
-    const service = new UsersService({} as any);
-    expect(service).toBeDefined();
+describe('toPublicProfile', () => {
+  it('omits passwordHash', () => {
+    expect(
+      toPublicProfile({
+        id: '1',
+        name: 'Maya',
+        email: 'maya@example.com',
+        preferredCurrency: 'INR',
+        timezone: 'Asia/Kolkata',
+        locale: 'en-IN',
+      }),
+    ).toEqual({
+      id: '1',
+      name: 'Maya',
+      email: 'maya@example.com',
+      preferredCurrency: 'INR',
+      timezone: 'Asia/Kolkata',
+      locale: 'en-IN',
+    });
   });
 });

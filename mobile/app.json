@@ -48,7 +48,8 @@
         }
       ],
       "expo-local-authentication",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true,

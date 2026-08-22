@@ -27,16 +27,20 @@ enum AiMessageRole {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  preferredCurrency  String   @default("INR")
+  timezone           String   @default("Asia/Kolkata")
+  locale             String   @default("en-IN")
 
   accounts       Account[]
   categories     Category[]
   budgets        Budget[]
   refreshTokens  RefreshToken[]
   conversations  AiConversation[]
+  passwordResets PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -146,6 +150,20 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model AiConversation {

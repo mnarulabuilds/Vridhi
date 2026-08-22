@@ -153,6 +153,7 @@ export class AiService {
     ];
 
     let finalText = 'I could not complete that request.';
+    const sources: string[] = [];
     for (let i = 0; i < 6; i += 1) {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -195,6 +196,9 @@ export class AiService {
             args = {};
           }
           const result = await this.runTool(userId, call.function.name, args);
+          if (!sources.includes(call.function.name)) {
+            sources.push(call.function.name);
+          }
           messages.push({
             role: 'tool',
             tool_call_id: call.id,
@@ -211,10 +215,15 @@ export class AiService {
     await this.prisma.aiMessage.create({
       data: { conversationId, role: 'ASSISTANT', content: finalText },
     });
+    await this.prisma.aiConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
 
     return {
       conversationId,
       message: { role: 'assistant' as const, content: finalText },
+      sources,
       disclaimer:
         'Vridhi explains recorded finances. It does not provide professional financial, investment, tax, or legal advice.',
     };
@@ -225,7 +234,18 @@ export class AiService {
       where: { userId },
       orderBy: { updatedAt: 'desc' },
       take: 30,
-      include: { messages: { orderBy: { createdAt: 'asc' }, take: 1 } },
+      include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
     });
+  }
+
+  async getConversation(userId: string, id: string) {
+    const conversation = await this.prisma.aiConversation.findFirst({
+      where: { id, userId },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    return conversation;
   }
 }

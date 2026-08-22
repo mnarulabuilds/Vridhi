@@ -38,6 +38,8 @@ interface AuthContextType {
   logout(): Promise<void>;
 
   refreshUser(): Promise<void>;
+
+  setUser(user: AuthenticatedUser): void;
 }
 
 const AuthContext =
@@ -142,6 +144,8 @@ export function AuthProvider({
       logout,
 
       refreshUser,
+
+      setUser,
     }),
     [
       user,

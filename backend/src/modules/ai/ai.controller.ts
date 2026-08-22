@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,6 +17,11 @@ export class AiController {
   @Get('conversations')
   conversations(@CurrentUser() user: CurrentUserData) {
     return this.ai.listConversations(user.id);
+  }
+
+  @Get('conversations/:id')
+  conversation(@CurrentUser() user: CurrentUserData, @Param('id') id: string) {
+    return this.ai.getConversation(user.id, id);
   }
 
   @Post('chat')
