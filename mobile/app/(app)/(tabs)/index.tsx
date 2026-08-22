@@ -116,7 +116,7 @@ export default function DashboardScreen() {
           ))
         )}
       </ScrollView>
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/transactions/create')}>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/transactions/quick')}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>

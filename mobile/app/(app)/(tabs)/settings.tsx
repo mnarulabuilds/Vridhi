@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SIZES } from '@/src/theme';
 import { useAuth } from '@/src/providers/auth-provider';
@@ -10,9 +10,20 @@ import { useAccounts } from '@/src/hooks/useAccounts';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 import { monthBounds } from '@/src/utils/month';
 import { ImportsApi } from '@/src/api/imports.api';
-import { Switch } from 'react-native';
+import FilterChips from '@/src/components/common/FilterChips';
+import type { CategoryType } from '@/src/api/categories.api';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+
+const CATEGORY_TYPES: Array<{ label: string; value: CategoryType }> = [
+  { label: 'Expense', value: 'EXPENSE' },
+  { label: 'Income', value: 'INCOME' },
+  { label: 'Transfer', value: 'TRANSFER' },
+];
+
+function categoryTypeLabel(type: string) {
+  return CATEGORY_TYPES.find((option) => option.value === type)?.label ?? type;
+}
 
 function parseCsv(text: string) {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -42,6 +53,7 @@ export default function SettingsScreen() {
   const bounds = monthBounds(new Date());
   const { budgets, upsertBudget, saving } = useBudgets(bounds.periodStart);
   const [categoryName, setCategoryName] = useState('');
+  const [categoryType, setCategoryType] = useState<CategoryType>('EXPENSE');
   const [csv, setCsv] = useState('');
   const [importAccountId, setImportAccountId] = useState('');
   const [importing, setImporting] = useState(false);
@@ -55,7 +67,7 @@ export default function SettingsScreen() {
   async function addCategory() {
     if (!categoryName.trim()) return;
     try {
-      await createCategory({ name: categoryName.trim(), type: 'EXPENSE' });
+      await createCategory({ name: categoryName.trim(), type: categoryType });
       setCategoryName('');
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message ?? 'Could not create category');
@@ -131,10 +143,16 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={styles.section}>Categories</Text>
+        <Text style={styles.muted}>Add income, expense, or transfer categories. Budgets below still apply to expenses only.</Text>
+        <FilterChips
+          value={categoryType}
+          options={CATEGORY_TYPES}
+          onChange={(value) => setCategoryType(value as CategoryType)}
+        />
         <View style={styles.inline}>
           <TextInput
             style={styles.input}
-            placeholder="New expense category"
+            placeholder={`New ${categoryTypeLabel(categoryType).toLowerCase()} category`}
             value={categoryName}
             onChangeText={setCategoryName}
           />
@@ -143,7 +161,7 @@ export default function SettingsScreen() {
         {categories.map((category) => (
           <View key={category.id} style={styles.row}>
             <Text style={styles.label}>
-              {category.name} · {category.type}
+              {category.name} · {categoryTypeLabel(category.type)}
             </Text>
             <Text style={styles.link} onPress={() => archiveCategory(category.id)}>
               Archive

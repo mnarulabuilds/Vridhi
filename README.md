@@ -209,7 +209,7 @@ The architecture will evolve incrementally as the application grows.
 - NestJS 11
 - Prisma 7 + PostgreSQL
 - JWT access + refresh tokens
-- Optional OpenAI-compatible chat with tool calling
+- Optional OpenAI-compatible chat (Ollama or cloud) with tool calling; common Ask questions are answered from the ledger without a model
 
 ### Data
 

@@ -52,6 +52,7 @@ export const AiApi = {
         conversationId: string;
         message: { role: 'assistant'; content: string };
         sources?: string[];
+        mode?: 'template' | 'llm' | 'fallback';
         disclaimer: string;
       }>('/ai/chat', payload)
     ).data,

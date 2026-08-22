@@ -145,7 +145,7 @@ export default function TransactionsScreen() {
       <FloatingActionButton
         onPress={() =>
           router.push(
-            '/transactions/create',
+            '/transactions/quick',
           )
         }
       />

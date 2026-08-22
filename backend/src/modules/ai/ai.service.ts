@@ -7,6 +7,21 @@ import { BudgetsService } from '../budgets/budgets.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatDto } from './dto/chat.dto';
 import { TransactionType } from '../transactions/enum/transaction-type.enum';
+import { classifyIntent, type ClassifiedIntent } from './intent';
+import { createChatCompletion, resolveLlmConfig } from './llm.client';
+import {
+  FALLBACK_HELP,
+  renderBalances,
+  renderBudgets,
+  renderCategorySpend,
+  renderInsights,
+  renderRecent,
+  renderSummary,
+  type SummarySnapshot,
+} from './templates';
+
+const DISCLAIMER =
+  'Vridhi explains recorded finances. It does not provide professional financial, investment, tax, or legal advice.';
 
 const SYSTEM_PROMPT = `You are Vridhi, a personal finance assistant for a user in India (INR unless an account says otherwise).
 You help them track, understand, and manage money they have already recorded in Vridhi.
@@ -18,14 +33,15 @@ Rules:
 - Transfers are not income or expenses.
 - Prefer concise answers with INR formatting (e.g. ₹1,250.00).
 - Mention the date range you used when summarizing.
-- When the user asks what changed, what is unusual, or what bills repeat, call get_insights.`
+- When the user asks what changed, what is unusual, or what bills repeat, call get_insights.`;
 
 const TOOLS = [
   {
     type: 'function',
     function: {
       name: 'get_financial_summary',
-      description: 'Income, expenses, savings rate, spending by category, budget vs actual, and account balances for a date range.',
+      description:
+        'Income, expenses, savings rate, spending by category, budget vs actual, and account balances for a date range.',
       parameters: {
         type: 'object',
         properties: {
@@ -40,7 +56,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'list_transactions',
-      description: 'List the user\'s transactions. Prefer a date range and a small limit.',
+      description: "List the user's transactions. Prefer a date range and a small limit.",
       parameters: {
         type: 'object',
         properties: {
@@ -99,14 +115,23 @@ export class AiService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private monthRange(date = new Date()) {
-    const from = new Date(date.getFullYear(), date.getMonth(), 1);
-    const to = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { from: from.toISOString(), to: to.toISOString() };
+  private llmConfig() {
+    return resolveLlmConfig({
+      AI_PROVIDER: this.config.get<string>('AI_PROVIDER'),
+      OPENAI_BASE_URL: this.config.get<string>('OPENAI_BASE_URL'),
+      OPENAI_API_KEY: this.config.get<string>('OPENAI_API_KEY'),
+      OPENAI_MODEL: this.config.get<string>('OPENAI_MODEL'),
+    });
+  }
+
+  private isLlmConfigured() {
+    const llm = this.llmConfig();
+    if (llm.provider === 'ollama') return true;
+    return Boolean(llm.apiKey);
   }
 
   private async runTool(userId: string, name: string, args: Record<string, unknown>) {
-    const fallback = this.monthRange();
+    const fallback = classifyIntent('', new Date());
     switch (name) {
       case 'get_financial_summary':
         return this.reporting.summary(
@@ -124,7 +149,10 @@ export class AiService {
       case 'list_accounts':
         return this.accounts.findAll(userId);
       case 'list_budgets':
-        return this.budgets.findForPeriod(userId, new Date(String(args.periodStart ?? fallback.from)));
+        return this.budgets.findForPeriod(
+          userId,
+          new Date(String(args.periodStart ?? fallback.from)),
+        );
       case 'get_insights':
         return this.reporting.insights(userId, args.asOf ? String(args.asOf) : undefined);
       default:
@@ -132,38 +160,100 @@ export class AiService {
     }
   }
 
-  async chat(userId: string, dto: ChatDto) {
-    const apiKey = this.config.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
-      throw new ServiceUnavailableException('AI is not configured. Set OPENAI_API_KEY.');
-    }
+  private async currencyFor(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredCurrency: true },
+    });
+    return user?.preferredCurrency || 'INR';
+  }
 
-    let conversationId = dto.conversationId;
-    if (conversationId) {
+  private async answerFromIntent(userId: string, intent: ClassifiedIntent) {
+    const currency = await this.currencyFor(userId);
+    const sources: string[] = [];
+
+    const loadSummary = async () => {
+      sources.push('get_financial_summary');
+      return this.reporting.summary(userId, intent.from, intent.to) as Promise<SummarySnapshot>;
+    };
+
+    switch (intent.kind) {
+      case 'summary': {
+        const summary = await loadSummary();
+        return { text: renderSummary(intent.periodLabel, summary, currency), sources };
+      }
+      case 'category_spend': {
+        const summary = await loadSummary();
+        return {
+          text: renderCategorySpend(intent.periodLabel, summary, intent.categoryHint ?? '', currency),
+          sources,
+        };
+      }
+      case 'budgets': {
+        const [summary, budgetRows] = await Promise.all([
+          loadSummary(),
+          this.budgets.findForPeriod(userId, new Date(intent.from)),
+        ]);
+        sources.push('list_budgets');
+        return {
+          text: renderBudgets(intent.periodLabel, budgetRows, summary, currency),
+          sources,
+        };
+      }
+      case 'balances': {
+        const summary = await loadSummary();
+        return { text: renderBalances([], summary, currency), sources };
+      }
+      case 'insights': {
+        const insights = await this.reporting.insights(userId, intent.asOf);
+        sources.push('get_insights');
+        return { text: renderInsights(intent.periodLabel, insights.notices), sources };
+      }
+      case 'recent': {
+        const page = await this.transactions.findAll(userId, {
+          from: intent.from,
+          to: intent.to,
+          limit: 8,
+        });
+        sources.push('list_transactions');
+        return { text: renderRecent(intent.periodLabel, page.items, currency), sources };
+      }
+      default:
+        return { text: FALLBACK_HELP, sources };
+    }
+  }
+
+  private async ensureConversation(userId: string, dto: ChatDto) {
+    if (dto.conversationId) {
       const existing = await this.prisma.aiConversation.findFirst({
-        where: { id: conversationId, userId },
+        where: { id: dto.conversationId, userId },
       });
       if (!existing) {
         throw new NotFoundException('Conversation not found');
       }
-    } else {
-      const created = await this.prisma.aiConversation.create({
-        data: {
-          userId,
-          title: dto.messages[0]?.content.slice(0, 80) || 'Chat',
-        },
-      });
-      conversationId = created.id;
+      return existing.id;
     }
+    const created = await this.prisma.aiConversation.create({
+      data: {
+        userId,
+        title: dto.messages[0]?.content.slice(0, 80) || 'Chat',
+      },
+    });
+    return created.id;
+  }
 
-    const lastUser = [...dto.messages].reverse().find((m) => m.role === 'user');
-    if (lastUser) {
-      await this.prisma.aiMessage.create({
-        data: { conversationId, role: 'USER', content: lastUser.content },
-      });
-    }
+  private async persistAssistant(conversationId: string, content: string) {
+    await this.prisma.aiMessage.create({
+      data: { conversationId, role: 'ASSISTANT', content },
+    });
+    await this.prisma.aiConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+  }
 
-    const model = this.config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini';
+  private async completeWithLlm(userId: string, dto: ChatDto) {
+    const llm = this.llmConfig();
     const messages: Array<Record<string, unknown>> = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...dto.messages.map((m) => ({ role: m.role, content: m.content })),
@@ -172,39 +262,13 @@ export class AiService {
     let finalText = 'I could not complete that request.';
     const sources: string[] = [];
     for (let i = 0; i < 6; i += 1) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          tools: TOOLS,
-          temperature: 0.2,
-        }),
+      const message = await createChatCompletion(llm, {
+        messages,
+        tools: TOOLS,
+        temperature: 0.2,
       });
-      if (!response.ok) {
-        const body = await response.text();
-        throw new ServiceUnavailableException(`AI provider error: ${response.status} ${body}`);
-      }
-      const payload = (await response.json()) as {
-        choices: Array<{
-          message: {
-            content?: string | null;
-            tool_calls?: Array<{
-              id: string;
-              function: { name: string; arguments: string };
-            }>;
-          };
-        }>;
-      };
-      const message = payload.choices[0]?.message;
-      if (!message) break;
-
       if (message.tool_calls?.length) {
-        messages.push(message);
+        messages.push(message as Record<string, unknown>);
         for (const call of message.tool_calls) {
           let args: Record<string, unknown> = {};
           try {
@@ -224,25 +288,60 @@ export class AiService {
         }
         continue;
       }
-
       finalText = message.content?.trim() || finalText;
       break;
     }
+    return { text: finalText, sources };
+  }
 
-    await this.prisma.aiMessage.create({
-      data: { conversationId, role: 'ASSISTANT', content: finalText },
-    });
-    await this.prisma.aiConversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
+  async chat(userId: string, dto: ChatDto) {
+    const conversationId = await this.ensureConversation(userId, dto);
+    const lastUser = [...dto.messages].reverse().find((m) => m.role === 'user');
+    if (lastUser) {
+      await this.prisma.aiMessage.create({
+        data: { conversationId, role: 'USER', content: lastUser.content },
+      });
+    }
 
+    const intent = classifyIntent(lastUser?.content ?? '');
+    let mode: 'template' | 'llm' | 'fallback' = 'template';
+    let text = FALLBACK_HELP;
+    let sources: string[] = [];
+
+    if (intent.kind !== 'unknown') {
+      const answered = await this.answerFromIntent(userId, intent);
+      text = answered.text;
+      sources = answered.sources;
+      mode = 'template';
+    } else if (!this.isLlmConfigured()) {
+      mode = 'fallback';
+      text = FALLBACK_HELP;
+    } else {
+      try {
+        const answered = await this.completeWithLlm(userId, dto);
+        text = answered.text;
+        sources = answered.sources;
+        mode = 'llm';
+      } catch (error) {
+        const llm = this.llmConfig();
+        const detail = error instanceof Error ? error.message : 'unknown error';
+        throw new ServiceUnavailableException(
+          `Could not reach the ${llm.provider} model at ${llm.baseUrl}. ${
+            llm.provider === 'ollama'
+              ? 'Start Ollama (ollama serve) or ask a structured question such as spending, budgets, or recurring bills.'
+              : 'Check OPENAI_API_KEY, or set AI_PROVIDER=ollama to use a local model.'
+          } ${detail}`,
+        );
+      }
+    }
+
+    await this.persistAssistant(conversationId, text);
     return {
       conversationId,
-      message: { role: 'assistant' as const, content: finalText },
+      message: { role: 'assistant' as const, content: text },
       sources,
-      disclaimer:
-        'Vridhi explains recorded finances. It does not provide professional financial, investment, tax, or legal advice.',
+      mode,
+      disclaimer: DISCLAIMER,
     };
   }
 

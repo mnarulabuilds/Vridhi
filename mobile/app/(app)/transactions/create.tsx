@@ -1,5 +1,5 @@
 import React from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import TransactionForm from '@/src/components/transactions/TransactionForm';
 import { useAccounts } from '@/src/hooks/useAccounts';
 import { useTransactions } from '@/src/hooks/useTransactions';
@@ -9,9 +9,21 @@ import { confirmAlert } from '@/src/utils/confirmAlert';
 import ScreenContainer from '@/src/components/ScreenContainer';
 
 export default function CreateTransactionScreen() {
+  const params = useLocalSearchParams<{
+    amount?: string;
+    type?: string;
+    categoryId?: string;
+    accountId?: string;
+    title?: string;
+  }>();
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories } = useCategories();
   const { createTransaction, creating } = useTransactions();
+  const prefilledType =
+    params.type === 'INCOME' || params.type === 'TRANSFER' || params.type === 'EXPENSE'
+      ? params.type
+      : 'EXPENSE';
+  const prefilledAmount = params.amount ? Number(params.amount) : undefined;
 
   async function handleSubmit(values: TransactionFormValues) {
     try {
@@ -42,6 +54,13 @@ export default function CreateTransactionScreen() {
       <TransactionForm
         accounts={accounts}
         categories={categories}
+        defaultValues={{
+          title: params.title ?? '',
+          amount: prefilledAmount && prefilledAmount > 0 ? prefilledAmount : 0,
+          type: prefilledType,
+          categoryId: params.categoryId ?? '',
+          accountId: params.accountId ?? '',
+        }}
         loading={creating}
         submitText="Create Transaction"
         onSubmit={handleSubmit}

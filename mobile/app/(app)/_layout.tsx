@@ -29,6 +29,7 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="accounts/create" options={{ title: 'Create Account' }} />
+      <Stack.Screen name="transactions/quick" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
