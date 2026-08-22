@@ -66,6 +66,8 @@ Options:
   set DATABASE_URL (Internal URL, not localhost) and JWT_SECRET, then:
     brew install render && render login
     npm run deploy
+  The CLI selects your Render workspace if you only have one, and matches the
+  web service by name, slug, or API_DOMAIN.
 
   Then separately:
     npm run deploy:mobile
@@ -193,9 +195,57 @@ require_render_cli() {
     die "Install the Render CLI (brew install render), then run: render login"
   fi
   if [[ -z "${RENDER_API_KEY:-}" ]]; then
-    if ! render whoami >/dev/null 2>&1; then
+    if ! render whoami -o json >/dev/null 2>&1; then
       die "Not logged in to Render. Run: render login"
     fi
+  fi
+}
+
+ensure_render_workspace() {
+  if render workspace current -o json >/dev/null 2>&1; then
+    return 0
+  fi
+  local json errfile
+  errfile="$(mktemp)"
+  json="$(render workspaces -o json 2>"$errfile")" || {
+    local msg
+    msg="$(tr '\n' ' ' <"$errfile")"
+    rm -f "$errfile"
+    die "Could not list Render workspaces. ${msg:-Run: render login}"
+  }
+  rm -f "$errfile"
+  local id
+  id="$(node -e '
+const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
+const list = Array.isArray(data) ? data : [];
+if (list.length === 1 && list[0] && list[0].id) {
+  process.stdout.write(String(list[0].id));
+  process.exit(0);
+}
+process.exit(list.length === 0 ? 2 : 3);
+' <<<"$json")" && {
+    render workspace set "$id" --confirm >/dev/null
+    ok "Using Render workspace $(render workspace current -o text 2>/dev/null || printf '%s' "$id")"
+    return 0
+  }
+  die "Select a Render workspace first: render workspaces && render workspace set <id>"
+}
+
+persist_env_key() {
+  local key="$1" value="$2"
+  [[ -n "$ENV_FILE" && -f "$ENV_FILE" && -n "$value" ]] || return 0
+  if grep -qE "^${key}=" "$ENV_FILE"; then
+    local tmp
+    tmp="$(mktemp)"
+    awk -v k="$key" -v v="$value" '
+      BEGIN { re = "^" k "=" }
+      $0 ~ re { print k "=" v; seen = 1; next }
+      { print }
+      END { if (!seen) print k "=" v }
+    ' "$ENV_FILE" >"$tmp"
+    mv "$tmp" "$ENV_FILE"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >>"$ENV_FILE"
   fi
 }
 
@@ -208,33 +258,53 @@ resolve_render_service_id() {
     printf '%s' "$RENDER_SERVICE_ID"
     return 0
   fi
-  local name domain json
+  local name domain json errfile
   name="$(env_get RENDER_SERVICE_NAME)"
   name="${name:-vridhi-api}"
   domain="$(normalize_domain "$(env_get API_DOMAIN)")"
-  json="$(render services -o json 2>/dev/null || true)"
+  domain="${domain#https://}"
+  errfile="$(mktemp)"
+  json="$(render services -o json 2>"$errfile")" || {
+    local msg
+    msg="$(tr '\n' ' ' <"$errfile")"
+    rm -f "$errfile"
+    die "Could not list Render services. ${msg:-Run: render login}"
+  }
+  rm -f "$errfile"
   [[ -n "$json" ]] || die "Could not list Render services. Run: render login"
-  RENDER_SERVICE_NAME="$name" RENDER_API_DOMAIN="$domain" node -e '
+  local id
+  id="$(RENDER_SERVICE_NAME="$name" RENDER_API_DOMAIN="$domain" node -e '
 const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
 const list = Array.isArray(data) ? data : (data.items || data.services || data.data || []);
-const name = process.env.RENDER_SERVICE_NAME;
-const domain = process.env.RENDER_API_DOMAIN;
-const hit = list.find((s) => {
-  const id = String(s.id || "");
-  const n = String(s.name || s.slug || "");
-  const url = String(s.url || s.serviceDetails && s.serviceDetails.url || "");
-  return n === name || (domain && (url.indexOf(domain) !== -1 || n === domain.replace(/\.onrender\.com$/, "")));
-});
-if (!hit || !hit.id) {
-  process.exit(2);
-}
+const wantName = String(process.env.RENDER_SERVICE_NAME || "").toLowerCase();
+const domain = String(process.env.RENDER_API_DOMAIN || "").toLowerCase();
+const slugFromDomain = domain.replace(/\.onrender\.com$/, "");
+const services = list.map((item) => item.service || item).filter((s) => s && s.id);
+const score = (s) => {
+  const n = String(s.name || "").toLowerCase();
+  const slug = String(s.slug || "").toLowerCase();
+  const url = String((s.serviceDetails && s.serviceDetails.url) || s.url || "").toLowerCase();
+  const type = String(s.type || "");
+  let pts = 0;
+  if (type === "web_service") pts += 1;
+  if (wantName && (n === wantName || slug === wantName)) pts += 10;
+  if (wantName === "vridhi-api" && (n === "vridhi" || slug.startsWith("vridhi"))) pts += 8;
+  if (domain && (url.includes(domain) || slug === slugFromDomain)) pts += 12;
+  return pts;
+};
+services.sort((a, b) => score(b) - score(a));
+const hit = services.find((s) => score(s) >= 8);
+if (!hit) process.exit(2);
 process.stdout.write(String(hit.id));
-' <<<"$json" || die "No Render web service found. Set RENDER_SERVICE_ID=srv-... in .env.production (Dashboard → service → Settings → ID)."
+' <<<"$json")" || die "No Render web service found matching ${name}${domain:+ or ${domain}}. Set RENDER_SERVICE_ID=srv-... in .env.production."
+  persist_env_key RENDER_SERVICE_ID "$id"
+  printf '%s' "$id"
 }
 
 deploy_api_render() {
   require_cmd curl "Install curl for the API health check."
   require_render_cli
+  ensure_render_workspace
   find_env_file
   local service_id api_url
   service_id="$(resolve_render_service_id)"
