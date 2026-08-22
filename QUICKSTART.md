@@ -28,49 +28,26 @@ Ask answers spending, savings rate, budgets, balances, and recurring/unusual not
 
 ## Deploy
 
-The API is a Docker image plus Postgres. The mobile app is an Expo/EAS build that talks to that API over HTTPS. From the repo root:
+Backend goes to **Render**. The Android app is a separate EAS build that bakes in that HTTPS URL.
 
 ```bash
-npm run deploy:init          # once: writes .env.production with random secrets
-# Edit .env.production: API_DOMAIN, EXPO_PUBLIC_API_URL, optional OPENAI_API_KEY
-(cd mobile && npx eas-cli login) # once: Expo account for EAS builds
-npm run deploy               # API (Docker)
-npm run deploy:mobile        # Android preview APK
+# once
+brew install render && render login
+(cd mobile && npx eas-cli login)
+
+# .env.production
+#   API_DOMAIN=your-service.onrender.com
+#   EXPO_PUBLIC_API_URL=https://your-service.onrender.com
+#   RENDER_SERVICE_ID=srv-...   # optional; Dashboard → service Settings
+
+npm run deploy               # trigger a Render deploy of the API
+npm run deploy:status        # GET https://your-service.onrender.com/health
+npm run deploy:mobile        # Android APK against that URL
 ```
 
-Useful variants:
+Local Docker (this machine only): `npm run deploy:api:local`
 
-```bash
-npm run deploy:api           # backend only, this machine
-npm run deploy:mobile        # EAS only
-npm run deploy:status        # compose ps + GET /health
-npm run deploy:all           # API, then submit an EAS mobile build
-npm run deploy -- mobile --platform ios --profile production
-```
-
-Set `API_DOMAIN=api.your-domain.com` (DNS A record pointing at the host) to start Caddy with automatic TLS. Otherwise the API listens on `127.0.0.1:3001` and you can put your own reverse proxy in front. Postgres is not published in the prod overlay.
-
-`EXPO_PUBLIC_API_URL` is baked into the native binary. Native apps do not need CORS; add web origins to `CORS_ORIGINS` only if you ship Expo web.
-
-`npm run deploy` starts the API. `npm run deploy:mobile` submits an Android preview APK that talks to this machine’s LAN IP. `npm run deploy:all` does both.
-
-## Render
-
-`P1001: Can't reach database server at localhost:5432` means `DATABASE_URL` is still the local value from `.env.example`. Render Postgres is a **separate** service; `localhost` inside the API container is not Postgres.
-
-1. Create a **PostgreSQL** instance on Render (same region as the web service).
-2. On the **Web Service** → Environment, set:
-
-   - `DATABASE_URL` = the database’s **Internal Database URL** (Dashboard → Postgres → Connections). It looks like `postgresql://…@dpg-….render.com/…` or `postgresql://…@dpg-…-a/…`, never `localhost`.
-   - If the URL has no `sslmode`, append `?sslmode=require`.
-   - `JWT_SECRET` = a long random string (`openssl rand -hex 32`).
-   - Do **not** copy `DATABASE_URL` from `backend/.env`.
-
-3. Docker settings if you did not use `render.yaml`: Dockerfile path `backend/Dockerfile`, context `backend`. Health check `/health`. Let Render set `PORT` (do not force `3001` if Render injects another port).
-
-Or commit `render.yaml` and create a **Blueprint** from this repo; it creates Postgres and injects `DATABASE_URL` for you.
-
-After the API is up, set `EXPO_PUBLIC_API_URL=https://your-service.onrender.com` and run `npm run deploy:mobile`.
+`DATABASE_URL` on Render must be the Postgres **Internal Database URL**, never `localhost`. See `render.yaml` for a Blueprint that wires this automatically.
 
 
 

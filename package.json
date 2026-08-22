@@ -4,8 +4,8 @@
   "scripts": {
     "deploy": "./scripts/deploy.sh api",
     "deploy:api": "./scripts/deploy.sh api",
+    "deploy:api:local": "./scripts/deploy.sh api --local",
     "deploy:mobile": "./scripts/deploy.sh mobile",
-    "deploy:all": "./scripts/deploy.sh all",
     "deploy:init": "./scripts/deploy.sh init",
     "deploy:status": "./scripts/deploy.sh status"
   }
