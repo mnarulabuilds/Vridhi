@@ -28,34 +28,32 @@ Ask answers spending, savings rate, budgets, balances, and recurring/unusual not
 
 ## Deploy
 
-The API is a Docker image plus Postgres. The mobile app is an Expo/EAS build that talks to that API over HTTPS.
-
-### 1. API
-
-On the server (or any Docker host):
+The API is a Docker image plus Postgres. The mobile app is an Expo/EAS build that talks to that API over HTTPS. From the repo root:
 
 ```bash
-cp .env.production.example .env.production
-# Set POSTGRES_PASSWORD and JWT_SECRET (`openssl rand -base64 48`).
-docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-curl http://127.0.0.1:3001/health
+npm run deploy:init          # once: writes .env.production with random secrets
+# Edit .env.production: API_DOMAIN, EXPO_PUBLIC_API_URL, optional OPENAI_API_KEY
+(cd mobile && npx eas-cli login) # once: Expo account for EAS builds
+npm run deploy               # API (Docker) + Android preview build
 ```
 
-Put a reverse proxy (Caddy or Nginx) in front with TLS. Point the public hostname at `127.0.0.1:3001`. Postgres is not published in the prod overlay.
-
-Put `EXPO_PUBLIC_API_URL=https://api.your-domain.com` in the mobile build. Native apps do not need CORS; add web origins to `CORS_ORIGINS` only if you ship Expo web.
-
-### 2. Android preview build
+Useful variants:
 
 ```bash
-cd mobile
-npx eas-cli login
-EXPO_PUBLIC_API_URL=https://api.your-domain.com npx eas-cli build --profile preview --platform android
+npm run deploy:api           # backend only, this machine
+npm run deploy:mobile        # EAS only
+npm run deploy:status        # compose ps + GET /health
+npm run deploy -- api --host user@your-server
+npm run deploy -- mobile --platform ios --profile production
 ```
 
-Install the APK from the Expo link. iOS App Store / TestFlight needs an Apple Developer account and `eas build --profile production --platform ios`.
+Set `API_DOMAIN=api.your-domain.com` (DNS A record pointing at the host) to start Caddy with automatic TLS. Otherwise the API listens on `127.0.0.1:3001` and you can put your own reverse proxy in front. Postgres is not published in the prod overlay.
 
-Do not run `gemma4:26b` (or other 20B+ models) on the API host. Structured Ask questions work without a model; open chat can use `OPENAI_API_KEY`.
+`EXPO_PUBLIC_API_URL` is baked into the native binary. Native apps do not need CORS; add web origins to `CORS_ORIGINS` only if you ship Expo web.
+
+`npm run deploy` starts the API, then an Android preview EAS build if `EXPO_PUBLIC_API_URL` or `API_DOMAIN` is set. Otherwise it skips mobile and prints what to set.
+
+Do not run `gemma4:26b` (or other 20B+ models) on the API host. Structured Ask questions work without a model; open chat can use `OPENAI_API_KEY`. If Ollama runs on the host, set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` (not `127.0.0.1`).
 
 
 ## Mobile
