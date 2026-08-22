@@ -14,7 +14,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.29.146:8787"
+        "EXPO_PUBLIC_API_URL": "https://vridhi-8hjg.onrender.com"
       }
     },
     "production": {

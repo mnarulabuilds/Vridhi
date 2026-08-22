@@ -54,7 +54,25 @@ Set `API_DOMAIN=api.your-domain.com` (DNS A record pointing at the host) to star
 
 `npm run deploy` starts the API. `npm run deploy:mobile` submits an Android preview APK that talks to this machine’s LAN IP. `npm run deploy:all` does both.
 
-Do not run `gemma4:26b` (or other 20B+ models) on the API host. Structured Ask questions work without a model; open chat can use `OPENAI_API_KEY`. If Ollama runs on the host, set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` (not `127.0.0.1`).
+## Render
+
+`P1001: Can't reach database server at localhost:5432` means `DATABASE_URL` is still the local value from `.env.example`. Render Postgres is a **separate** service; `localhost` inside the API container is not Postgres.
+
+1. Create a **PostgreSQL** instance on Render (same region as the web service).
+2. On the **Web Service** → Environment, set:
+
+   - `DATABASE_URL` = the database’s **Internal Database URL** (Dashboard → Postgres → Connections). It looks like `postgresql://…@dpg-….render.com/…` or `postgresql://…@dpg-…-a/…`, never `localhost`.
+   - If the URL has no `sslmode`, append `?sslmode=require`.
+   - `JWT_SECRET` = a long random string (`openssl rand -hex 32`).
+   - Do **not** copy `DATABASE_URL` from `backend/.env`.
+
+3. Docker settings if you did not use `render.yaml`: Dockerfile path `backend/Dockerfile`, context `backend`. Health check `/health`. Let Render set `PORT` (do not force `3001` if Render injects another port).
+
+Or commit `render.yaml` and create a **Blueprint** from this repo; it creates Postgres and injects `DATABASE_URL` for you.
+
+After the API is up, set `EXPO_PUBLIC_API_URL=https://your-service.onrender.com` and run `npm run deploy:mobile`.
+
+
 
 
 ## Mobile
