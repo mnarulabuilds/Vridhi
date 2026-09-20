@@ -32,6 +32,14 @@ export class ImportsController {
     return this.imports.preview(file.buffer);
   }
 
+  @Post('preview-json')
+  previewJson(@Body() body: { header: string[]; rows: string[][] }) {
+    if (!body?.header?.length) {
+      throw new BadRequestException('header is required');
+    }
+    return this.imports.previewFromRecords([body.header, ...(body.rows ?? [])]);
+  }
+
   @Post('commit')
   @ApiBody({ type: Object })
   commit(@CurrentUser() user: CurrentUserData, @Body() dto: CommitImportDto) {

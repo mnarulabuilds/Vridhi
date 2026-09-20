@@ -37,11 +37,16 @@ describe('AuthService', () => {
     }),
   };
 
+  const emailService = { sendPasswordReset: jest.fn().mockResolvedValue(undefined) };
+  const entitlements = { ensureSubscription: jest.fn().mockResolvedValue({ plan: 'FREE' }) };
+
   const service = new AuthService(
     usersService as any,
     jwtService as any,
     prisma as any,
     configService as any,
+    emailService as any,
+    entitlements as any,
   );
 
   const user = {

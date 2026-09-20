@@ -25,6 +25,7 @@ export function toPublicProfile(user: {
   preferredCurrency: string;
   timezone: string;
   locale: string;
+  onboardingCompletedAt?: Date | null;
 }) {
   return {
     id: user.id,
@@ -33,6 +34,7 @@ export function toPublicProfile(user: {
     preferredCurrency: user.preferredCurrency,
     timezone: user.timezone,
     locale: user.locale,
+    onboardingCompletedAt: user.onboardingCompletedAt ?? null,
   };
 }
 
@@ -55,6 +57,14 @@ export class UsersService {
         categories: { create: DEFAULT_CATEGORIES },
       },
     });
+  }
+
+  async completeOnboarding(userId: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { onboardingCompletedAt: new Date() },
+    });
+    return toPublicProfile(user);
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

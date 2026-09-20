@@ -31,6 +31,14 @@ describe('ImportsService', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
+  it('previews parsed records', () => {
+    const preview = service.previewFromRecords([
+      ['Date', 'Amount'],
+      ['2026-01-01', '10'],
+    ]);
+    expect(preview.rowCount).toBe(1);
+  });
+
   it('previews CSV headers and mapping', () => {
     const csv = Buffer.from('Date,Debit,Credit,Description\n2026-01-01,100,,Coffee\n');
     const preview = service.preview(csv);

@@ -34,10 +34,25 @@ describe('UsersService', () => {
       id: '1',
       name: 'Maya',
       email: 'maya@example.com',
+      onboardingCompletedAt: null,
       preferredCurrency: 'INR',
       timezone: 'Asia/Kolkata',
       locale: 'en-IN',
     });
+  });
+
+  it('marks onboarding complete', async () => {
+    prisma.user.update.mockResolvedValue({
+      id: 'u1',
+      name: 'Maya',
+      email: 'maya@example.com',
+      preferredCurrency: 'INR',
+      timezone: 'Asia/Kolkata',
+      locale: 'en-IN',
+      onboardingCompletedAt: new Date('2026-01-01'),
+    });
+    const profile = await service.completeOnboarding('u1');
+    expect(profile.onboardingCompletedAt).toBeTruthy();
   });
 
   it('updates profile fields', async () => {

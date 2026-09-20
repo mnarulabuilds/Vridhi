@@ -4,10 +4,14 @@ import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { LedgerEntry } from '../../common/money/ledger';
 import { positionForAccount } from '../../common/money/net-worth';
+import { LedgerLoaderService } from '../../common/ledger/ledger-loader.service';
 
 @Injectable()
 export class AccountsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ledgerLoader: LedgerLoaderService,
+  ) {}
 
   private withCurrentBalance(account: {
     id: string;
@@ -45,13 +49,6 @@ export class AccountsService {
     return account;
   }
 
-  private ledgerSelect = {
-    amount: true,
-    type: true,
-    accountId: true,
-    transferToAccountId: true,
-  } as const;
-
   async create(userId: string, dto: CreateAccountDto) {
     const account = await this.prisma.account.create({
       data: {
@@ -71,24 +68,32 @@ export class AccountsService {
     const accounts = await this.prisma.account.findMany({
       where: { userId, isArchived: false },
       orderBy: { createdAt: 'desc' },
-      include: {
-        transactions: { select: this.ledgerSelect },
-        incomingTransfers: { select: this.ledgerSelect },
-      },
     });
-    return accounts.map((account) => this.withCurrentBalance(account));
+    const entriesByAccount = await this.ledgerLoader.loadEntriesForAccounts(
+      userId,
+      accounts.map((account) => account.id),
+    );
+    return accounts.map((account) =>
+      this.withCurrentBalance({
+        ...account,
+        transactions: entriesByAccount.get(account.id) ?? [],
+        incomingTransfers: [],
+      }),
+    );
   }
 
   async findOne(userId: string, accountId: string) {
     await this.getAccountOrThrow(userId, accountId);
     const account = await this.prisma.account.findUniqueOrThrow({
       where: { id: accountId },
-      include: {
-        transactions: { select: this.ledgerSelect },
-        incomingTransfers: { select: this.ledgerSelect },
-      },
     });
-    return this.withCurrentBalance(account);
+    const entriesByAccount = await this.ledgerLoader.loadEntriesForAccounts(userId, [accountId]);
+    const entries = entriesByAccount.get(accountId) ?? [];
+    return this.withCurrentBalance({
+      ...account,
+      transactions: entries,
+      incomingTransfers: [],
+    });
   }
 
   async update(userId: string, accountId: string, dto: UpdateAccountDto) {

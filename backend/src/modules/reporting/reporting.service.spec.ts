@@ -6,8 +6,12 @@ describe('ReportingService', () => {
     transaction: { findMany: jest.fn() },
     account: { findMany: jest.fn() },
     budget: { findMany: jest.fn() },
+    reportRun: { create: jest.fn() },
   };
-  const service = new ReportingService(prisma as any);
+  const ledgerLoader = {
+    loadEntriesForAccounts: jest.fn().mockResolvedValue(new Map([['a1', []]])),
+  };
+  const service = new ReportingService(prisma as any, ledgerLoader as any);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -41,8 +45,8 @@ describe('ReportingService', () => {
         name: 'Cash',
         currency: 'INR',
         openingBalance: 0,
-        transactions: [],
-        incomingTransfers: [],
+        type: 'CASH',
+        createdAt: new Date('2026-01-01'),
       },
     ]);
     prisma.budget.findMany.mockResolvedValue([
@@ -79,16 +83,26 @@ describe('ReportingService', () => {
       {
         id: 'a1',
         name: 'Bank',
-        type: 'CHECKING',
+        type: 'CASH',
         currency: 'INR',
         openingBalance: 1000,
         createdAt: new Date('2026-01-01'),
-        transactions: [],
-        incomingTransfers: [],
       },
     ]);
+    ledgerLoader.loadEntriesForAccounts.mockResolvedValue(new Map([['a1', []]]));
     const worth = await service.netWorth('u1', '2026-08-15');
     expect(worth.history).toHaveLength(12);
     expect(typeof worth.netWorth).toBe('number');
+  });
+
+  it('builds growth report', async () => {
+    prisma.transaction.findMany.mockResolvedValue([]);
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.budget.findMany.mockResolvedValue([]);
+    ledgerLoader.loadEntriesForAccounts.mockResolvedValue(new Map());
+    prisma.reportRun.create.mockResolvedValue({ id: 'r1' });
+    const report = await service.growthReport('u1', '2026-08-01', '2026-08-31');
+    expect(report.recommendations.length).toBeGreaterThan(0);
+    expect(prisma.reportRun.create).toHaveBeenCalled();
   });
 });

@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SIZES } from '@/src/theme';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
-import { AiApi } from '@/src/api/imports.api';
+import { AiApi } from '@/src/api/ai.api';
 
 interface ChatItem {
   role: 'user' | 'assistant';

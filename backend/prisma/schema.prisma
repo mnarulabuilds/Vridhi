@@ -28,21 +28,70 @@ enum AiMessageRole {
   ASSISTANT
 }
 
-model User {
-  id                 String   @id @default(cuid())
-  name               String
-  email              String   @unique
-  passwordHash       String
-  preferredCurrency  String   @default("INR")
-  timezone           String   @default("Asia/Kolkata")
-  locale             String   @default("en-IN")
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
 
-  accounts       Account[]
-  categories     Category[]
-  budgets        Budget[]
-  refreshTokens  RefreshToken[]
-  conversations  AiConversation[]
-  passwordResets PasswordResetToken[]
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum ConnectionStatus {
+  PENDING
+  LINKED
+  SYNCING
+  ERROR
+  DISCONNECTED
+}
+
+enum AssetClass {
+  EQUITY
+  MUTUAL_FUND
+  ETF
+  DEBT
+  CRYPTO
+  REAL_ESTATE
+  OTHER
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum ReportKind {
+  MONTHLY_GROWTH
+  NET_WORTH
+  PORTFOLIO
+  TAX_SUMMARY
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  name                  String
+  email                 String    @unique
+  passwordHash          String
+  preferredCurrency     String    @default("INR")
+  timezone              String    @default("Asia/Kolkata")
+  locale                String    @default("en-IN")
+  onboardingCompletedAt DateTime?
+
+  accounts            Account[]
+  categories          Category[]
+  budgets             Budget[]
+  refreshTokens       RefreshToken[]
+  conversations       AiConversation[]
+  passwordResets      PasswordResetToken[]
+  subscription        UserSubscription?
+  financialConnections FinancialConnection[]
+  holdings            Holding[]
+  goals               Goal[]
+  reportRuns          ReportRun[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -60,9 +109,11 @@ model Account {
   color          String?
   isArchived     Boolean     @default(false)
   userId         String
+  externalAccountId String?  @unique
 
   transactions        Transaction[]
   incomingTransfers   Transaction[] @relation("TransferDestination")
+  externalAccount     ExternalAccount? @relation(fields: [externalAccountId], references: [id], onDelete: SetNull)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -85,6 +136,7 @@ model Transaction {
   categoryId           String?
   transferToAccountId  String?
   importHash           String?
+  externalId           String?
 
   account           Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transferToAccount Account?  @relation("TransferDestination", fields: [transferToAccountId], references: [id], onDelete: SetNull)
@@ -97,6 +149,7 @@ model Transaction {
   @@index([accountId, transactionDate])
   @@index([categoryId])
   @@index([transferToAccountId])
+  @@index([accountId, externalId])
   @@map("transactions")
 }
 
@@ -194,4 +247,122 @@ model AiMessage {
 
   @@index([conversationId])
   @@map("ai_messages")
+}
+
+model UserSubscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  provider             String?
+  externalCustomerId   String?
+  externalSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  adsEnabled           Boolean            @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_subscriptions")
+}
+
+model FinancialConnection {
+  id              String           @id @default(cuid())
+  userId          String
+  provider        String
+  institutionName String?
+  status          ConnectionStatus @default(PENDING)
+  externalItemId  String?
+  lastSyncedAt    DateTime?
+  lastError       String?
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalAccounts ExternalAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, provider])
+  @@map("financial_connections")
+}
+
+model ExternalAccount {
+  id           String   @id @default(cuid())
+  connectionId String
+  externalId   String
+  name         String
+  mask         String?
+  type         AccountType @default(OTHER_ASSET)
+  currency     String   @default("INR")
+
+  connection FinancialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  account    Account?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, externalId])
+  @@index([connectionId])
+  @@map("external_accounts")
+}
+
+model Holding {
+  id            String     @id @default(cuid())
+  userId        String
+  symbol        String
+  name          String
+  assetClass    AssetClass @default(OTHER)
+  quantity      Decimal    @db.Decimal(18, 6)
+  costBasis     Decimal    @db.Decimal(15, 2)
+  currency      String     @default("INR")
+  lastPrice     Decimal?   @db.Decimal(15, 4)
+  lastPriceAt   DateTime?
+  accountId     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, symbol])
+  @@map("holdings")
+}
+
+model Goal {
+  id            String     @id @default(cuid())
+  userId        String
+  name          String
+  targetAmount  Decimal    @db.Decimal(15, 2)
+  currentAmount Decimal    @db.Decimal(15, 2) @default(0)
+  targetDate    DateTime?
+  status        GoalStatus @default(ACTIVE)
+  currency      String     @default("INR")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("goals")
+}
+
+model ReportRun {
+  id          String     @id @default(cuid())
+  userId      String
+  kind        ReportKind
+  periodStart DateTime?
+  periodEnd   DateTime?
+  payload     Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+  @@map("report_runs")
 }

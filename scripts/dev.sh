@@ -214,13 +214,17 @@ if ! (
 fi
 ok "Database ready"
 
-log "Building API (initial compile)…"
-(
-  cd backend
-  rm -f tsconfig.build.tsbuildinfo
-  npm run build
-)
-ok "API build ready"
+if [[ "${SKIP_API_BUILD:-0}" == "1" ]] && [[ -f backend/dist/main.js ]]; then
+  ok "API build skipped (dist present; set SKIP_API_BUILD=0 to force rebuild)"
+else
+  log "Building API (initial compile)…"
+  (
+    cd backend
+    rm -f tsconfig.build.tsbuildinfo
+    npm run build
+  )
+  ok "API build ready"
+fi
 
 wait_for_api() {
   local attempt

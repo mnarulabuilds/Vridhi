@@ -19,5 +19,8 @@ export function validateEnv(config: Record<string, unknown>) {
     AI_PROVIDER: String(config.AI_PROVIDER ?? 'openai').toLowerCase(),
     OPENAI_BASE_URL: config.OPENAI_BASE_URL ?? '',
     OPENAI_MODEL: config.OPENAI_MODEL ?? (String(config.AI_PROVIDER ?? '').toLowerCase() === 'ollama' ? 'llama3.2' : 'gpt-4o-mini'),
+    APP_PUBLIC_URL: config.APP_PUBLIC_URL ?? 'http://localhost:3001',
+    EMAIL_FROM: config.EMAIL_FROM ?? 'noreply@vridhi.app',
+    EMAIL_API_KEY: config.EMAIL_API_KEY ?? '',
   };
 }

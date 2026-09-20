@@ -1,6 +1,8 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EntitlementGuard } from '../../common/entitlements/entitlement.guard';
+import { RequiresEntitlement } from '../../common/entitlements/require-entitlement.decorator';
 import { CurrentUser } from '../../common/decorator/current-user.decorator';
 import type { CurrentUserData } from '../../common/interfaces/current-user.interface';
 import { ReportingService } from './reporting.service';
@@ -8,7 +10,7 @@ import { ReportingService } from './reporting.service';
 @ApiTags('reports')
 @ApiBearerAuth()
 @Controller('api/v1/reports')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
 export class ReportingController {
   constructor(private readonly reporting: ReportingService) {}
 
@@ -29,5 +31,15 @@ export class ReportingController {
   @Get('net-worth')
   netWorth(@CurrentUser() user: CurrentUserData, @Query('asOf') asOf?: string) {
     return this.reporting.netWorth(user.id, asOf);
+  }
+
+  @Get('growth')
+  @RequiresEntitlement('advanced_reports')
+  growth(
+    @CurrentUser() user: CurrentUserData,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.reporting.growthReport(user.id, from, to);
   }
 }

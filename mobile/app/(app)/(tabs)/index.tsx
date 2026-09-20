@@ -131,7 +131,11 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
             {notices.map((notice) => (
-              <InsightNoticeCard key={notice.title} notice={notice} />
+              <InsightNoticeCard
+                key={notice.title}
+                notice={notice}
+                onPress={() => router.push('/(app)/(tabs)/analytics')}
+              />
             ))}
           </>
         ) : null}
@@ -154,7 +158,12 @@ export default function DashboardScreen() {
           ))
         )}
       </ScrollView>
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/transactions/quick')}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/transactions/quick')}
+        accessibilityRole="button"
+        accessibilityLabel="Add transaction"
+      >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>

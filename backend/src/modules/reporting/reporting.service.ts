@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ReportKind } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { cashFlow, currentBalance, savingsRate } from '../../common/money/ledger';
+import { LedgerLoaderService } from '../../common/ledger/ledger-loader.service';
 import {
   buildNotices,
   cashFlowByMonth,
@@ -13,7 +15,10 @@ import { summarizeNetWorth, type DatedLedgerEntry } from '../../common/money/net
 
 @Injectable()
 export class ReportingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ledgerLoader: LedgerLoaderService,
+  ) {}
 
   async summary(userId: string, from: string, to: string) {
     const start = new Date(from);
@@ -39,14 +44,6 @@ export class ReportingService {
       }),
       this.prisma.account.findMany({
         where: { userId, isArchived: false },
-        include: {
-          transactions: {
-            select: { amount: true, type: true, accountId: true, transferToAccountId: true },
-          },
-          incomingTransfers: {
-            select: { amount: true, type: true, accountId: true, transferToAccountId: true },
-          },
-        },
       }),
       this.prisma.budget.findMany({
         where: {
@@ -85,13 +82,18 @@ export class ReportingService {
       };
     });
 
+    const entriesByAccount = await this.ledgerLoader.loadEntriesForAccounts(
+      userId,
+      accounts.map((account) => account.id),
+      { to: end },
+    );
     const balances = accounts.map((account) => ({
       accountId: account.id,
       name: account.name,
       currency: account.currency,
       balance: currentBalance(
         Number(account.openingBalance),
-        [...account.transactions, ...account.incomingTransfers],
+        entriesByAccount.get(account.id) ?? [],
         account.id,
       ),
     }));
@@ -160,27 +162,11 @@ export class ReportingService {
     }
     const accounts = await this.prisma.account.findMany({
       where: { userId, isArchived: false },
-      include: {
-        transactions: {
-          select: {
-            amount: true,
-            type: true,
-            accountId: true,
-            transferToAccountId: true,
-            transactionDate: true,
-          },
-        },
-        incomingTransfers: {
-          select: {
-            amount: true,
-            type: true,
-            accountId: true,
-            transferToAccountId: true,
-            transactionDate: true,
-          },
-        },
-      },
     });
+    const entriesByAccount = await this.ledgerLoader.loadEntriesForAccounts(
+      userId,
+      accounts.map((account) => account.id),
+    );
     const mapped = accounts.map((account) => ({
       id: account.id,
       name: account.name,
@@ -188,7 +174,7 @@ export class ReportingService {
       currency: account.currency,
       openingBalance: account.openingBalance,
       createdAt: account.createdAt,
-      entries: [...account.transactions, ...account.incomingTransfers] as DatedLedgerEntry[],
+      entries: (entriesByAccount.get(account.id) ?? []) as DatedLedgerEntry[],
     }));
     const current = summarizeNetWorth(mapped, focus);
     const history: Array<{ month: string; assets: number; liabilities: number; netWorth: number }> = [];
@@ -210,5 +196,32 @@ export class ReportingService {
       byAccount: current.byAccount,
       history,
     };
+  }
+
+  async growthReport(userId: string, from: string, to: string) {
+    const summary = await this.summary(userId, from, to);
+    const netWorthNow = await this.netWorth(userId, to);
+    const payload = {
+      summary,
+      netWorth: netWorthNow,
+      recommendations: [
+        summary.savingsRate >= 0.2
+          ? 'Strong savings rate — consider allocating surplus to goals or investments.'
+          : 'Increase savings by reviewing top spending categories and budget limits.',
+        summary.budgetVsActual.some((row) => row.utilization > 1)
+          ? 'One or more budgets are exceeded this period.'
+          : 'Budgets are on track for this period.',
+      ],
+    };
+    await this.prisma.reportRun.create({
+      data: {
+        userId,
+        kind: ReportKind.MONTHLY_GROWTH,
+        periodStart: new Date(from),
+        periodEnd: new Date(to),
+        payload,
+      },
+    });
+    return payload;
   }
 }

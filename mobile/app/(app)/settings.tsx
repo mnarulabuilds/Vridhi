@@ -123,11 +123,12 @@ export default function SettingsScreen() {
     const { header, rows } = parseCsv(csv);
     setImporting(true);
     try {
+      const preview = await ImportsApi.previewJson({ header, rows });
       const result = await ImportsApi.commit({
         accountId,
-        header,
-        rows,
-        mapping: guessMapping(header),
+        header: preview.header,
+        rows: preview.rows,
+        mapping: preview.suggestedMapping,
       });
       Alert.alert(
         'Import complete',
@@ -155,8 +156,22 @@ export default function SettingsScreen() {
 
         <View style={styles.row}>
           <Text style={styles.label}>Unlock with biometrics</Text>
-          <Switch value={biometrics} onValueChange={(value) => { void toggleBiometrics(value); }} />
+          <Switch
+            value={biometrics}
+            onValueChange={(value) => {
+              void toggleBiometrics(value);
+            }}
+            accessibilityLabel="Unlock with biometrics"
+          />
         </View>
+
+        <Text style={styles.section}>Premium & data</Text>
+        <Text style={styles.link} onPress={() => router.push('/subscription')} accessibilityRole="button">
+          Subscription & ads
+        </Text>
+        <Text style={styles.link} onPress={() => router.push('/portfolio')} accessibilityRole="button">
+          Investment portfolio
+        </Text>
 
         <Text style={styles.section}>Categories</Text>
         <Text style={styles.muted}>Add income, expense, or transfer categories. Budgets below still apply to expenses only.</Text>

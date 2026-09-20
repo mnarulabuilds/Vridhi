@@ -26,6 +26,11 @@ export class UsersController {
     return this.users.updateProfile(user.id, dto);
   }
 
+  @Patch('me/onboarding-complete')
+  completeOnboarding(@CurrentUser() user: CurrentUserData) {
+    return this.users.completeOnboarding(user.id);
+  }
+
   @Get('me/export')
   export(@CurrentUser() user: CurrentUserData) {
     return this.users.exportData(user.id);

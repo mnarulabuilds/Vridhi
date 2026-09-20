@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   preferredCurrency?: string;
   timezone?: string;
   locale?: string;
+  onboardingCompletedAt?: string | null;
 }
 
 export interface AuthResponse {

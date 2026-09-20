@@ -9,6 +9,9 @@ export interface UpdateProfileRequest {
 }
 
 export const UsersApi = {
+  me: async () => (await api.get<AuthenticatedUser>('/users/me')).data,
+  completeOnboarding: async () =>
+    (await api.patch<AuthenticatedUser>('/users/me/onboarding-complete', {})).data,
   update: async (payload: UpdateProfileRequest) =>
     (await api.patch<AuthenticatedUser>('/users/me', payload)).data,
   exportData: async () => (await api.get('/users/me/export')).data,

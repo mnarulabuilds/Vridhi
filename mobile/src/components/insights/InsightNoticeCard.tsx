@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, SHADOWS } from '@/src/theme';
 import type { InsightNotice } from '@/src/api/reports.api';
 
@@ -9,13 +9,39 @@ const TONE = {
   info: { border: COLORS.primary, bg: COLORS.primaryLight },
 };
 
-export default function InsightNoticeCard({ notice }: { notice: InsightNotice }) {
+export default function InsightNoticeCard({
+  notice,
+  onPress,
+}: {
+  notice: InsightNotice;
+  onPress?: () => void;
+}) {
   const tone = TONE[notice.severity];
-  return (
-    <View style={[styles.card, { borderLeftColor: tone.border, backgroundColor: tone.bg }]}>
+  const body = (
+    <>
       <Text style={styles.title}>{notice.title}</Text>
       <Text style={styles.detail}>{notice.detail}</Text>
-    </View>
+    </>
+  );
+  if (!onPress) {
+    return (
+      <View
+        style={[styles.card, { borderLeftColor: tone.border, backgroundColor: tone.bg }]}
+        accessibilityRole="text"
+      >
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.card, { borderLeftColor: tone.border, backgroundColor: tone.bg }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${notice.title}. ${notice.detail}`}
+    >
+      {body}
+    </Pressable>
   );
 }
 

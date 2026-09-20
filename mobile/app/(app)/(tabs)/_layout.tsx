@@ -38,6 +38,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
+          tabBarAccessibilityLabel: 'Dashboard tab',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'grid' : 'grid-outline'} size={24} color={color} />
           ),

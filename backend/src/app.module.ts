@@ -12,6 +12,13 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { AiModule } from './modules/ai/ai.module';
+import { ConnectionsModule } from './modules/connections/connections.module';
+import { PortfolioModule } from './modules/portfolio/portfolio.module';
+import { GoalsModule } from './modules/goals/goals.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { LedgerModule } from './common/ledger/ledger.module';
+import { EmailModule } from './common/email/email.module';
+import { EntitlementsModule } from './common/entitlements/entitlements.module';
 import { HealthController } from './health/health.controller';
 import { validateEnv } from './config/env.validation';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -27,6 +34,9 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
       throttlers: [{ name: 'default', ttl: 60000, limit: 100 }],
     }),
     PrismaModule,
+    LedgerModule,
+    EmailModule,
+    EntitlementsModule,
     UsersModule,
     AuthModule,
     AccountsModule,
@@ -36,6 +46,10 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
     ReportingModule,
     ImportsModule,
     AiModule,
+    ConnectionsModule,
+    PortfolioModule,
+    GoalsModule,
+    SubscriptionsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -73,12 +73,7 @@ export function importHash(accountId: string, dateIso: string, amount: number, t
 export class ImportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  preview(fileBuffer: Buffer) {
-    const records = parse(fileBuffer, {
-      relaxColumnCount: true,
-      skip_empty_lines: true,
-      trim: true,
-    }) as string[][];
+  previewFromRecords(records: string[][]) {
     if (!records.length) {
       throw new BadRequestException('CSV is empty');
     }
@@ -91,6 +86,15 @@ export class ImportsService {
       sample: rows.slice(0, 8),
       rows,
     };
+  }
+
+  preview(fileBuffer: Buffer) {
+    const records = parse(fileBuffer, {
+      relaxColumnCount: true,
+      skip_empty_lines: true,
+      trim: true,
+    }) as string[][];
+    return this.previewFromRecords(records);
   }
 
   async commit(userId: string, dto: ImportCommitDto) {

@@ -11,21 +11,23 @@ describe('AccountsService', () => {
       update: jest.fn(),
     },
   };
-  const service = new AccountsService(prisma as any);
+  const ledgerLoader = {
+    loadEntriesForAccounts: jest.fn().mockResolvedValue(new Map()),
+  };
+  const service = new AccountsService(prisma as any, ledgerLoader as any);
 
   beforeEach(() => jest.clearAllMocks());
 
   it('creates and reloads an account with balances', async () => {
     prisma.account.create.mockResolvedValue({ id: 'a1' });
     prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    ledgerLoader.loadEntriesForAccounts.mockResolvedValue(new Map([['a1', []]]));
     prisma.account.findUniqueOrThrow.mockResolvedValue({
       id: 'a1',
       name: 'Cash',
       type: 'CHECKING',
       openingBalance: 100,
       currency: 'INR',
-      transactions: [],
-      incomingTransfers: [],
     });
     const account = await service.create('u1', {
       name: 'Cash',
@@ -43,10 +45,16 @@ describe('AccountsService', () => {
         type: 'CHECKING',
         openingBalance: 0,
         currency: 'INR',
-        transactions: [{ amount: 50, type: 'INCOME', accountId: 'a1', transferToAccountId: null }],
-        incomingTransfers: [],
       },
     ]);
+    ledgerLoader.loadEntriesForAccounts.mockResolvedValue(
+      new Map([
+        [
+          'a1',
+          [{ amount: 50, type: 'INCOME', accountId: 'a1', transferToAccountId: null }],
+        ],
+      ]),
+    );
     const rows = await service.findAll('u1');
     expect(rows[0].currentBalance).toBe(50);
   });

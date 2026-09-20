@@ -14,6 +14,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { EmailService } from '../../common/email/email.service';
+import { EntitlementsService } from '../../common/entitlements/entitlements.service';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -26,6 +28,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private hashRefreshToken(token: string) {
@@ -67,11 +71,12 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
-        const user = await this.usersService.create({
-            name: dto.name,
-            email: dto.email.trim().toLowerCase(),
-            passwordHash,
-        });
+    const user = await this.usersService.create({
+      name: dto.name,
+      email: dto.email.trim().toLowerCase(),
+      passwordHash,
+    });
+    await this.entitlements.ensureSubscription(user.id);
     return this.createAuthResponse(user);
   }
 
@@ -163,8 +168,8 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
+    await this.emailService.sendPasswordReset(user.email, token);
     if (this.configService.get('NODE_ENV') !== 'production') {
-      this.logger.warn(`Password reset token for ${user.email}: ${token}`);
       return { ...accepted, debugResetToken: token };
     }
     return accepted;
