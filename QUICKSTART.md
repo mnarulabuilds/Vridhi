@@ -1,6 +1,30 @@
 # Quick Start Guide
 
-## Backend
+## One command (recommended)
+
+From the repo root (requires [Docker](https://www.docker.com/) for Postgres):
+
+```bash
+npm run dev
+```
+
+This starts Postgres, runs Prisma migrations, the API on port **3001**, and the Expo dev server. On first run it copies `backend/.env` and `mobile/.env` from the examples and installs npm packages if `node_modules` is missing.
+
+If port **5432** is already used by another Postgres on your machine, `dev.sh` picks the next free port (e.g. 5434) and updates `DATABASE_URL` in `backend/.env` automatically.
+
+```bash
+npm run dev:ios      # Same as dev, opens iOS simulator directly
+npm run dev:android  # Opens Android emulator
+npm run dev:web      # Opens in the browser
+npm run dev:api      # Postgres + API only (no Expo)
+npm run setup        # Force npm install in backend + mobile, then API only
+```
+
+Expo runs in the **foreground** so `i` / `a` / `w` work. Nest logs go to `.dev/backend.log` (`tail -f .dev/backend.log`).
+
+## Manual steps
+
+### Backend
 
 1. Start Postgres:
 

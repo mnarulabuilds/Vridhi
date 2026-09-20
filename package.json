@@ -2,6 +2,12 @@
   "name": "vridhi",
   "private": true,
   "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:ios": "./scripts/dev.sh --ios",
+    "dev:android": "./scripts/dev.sh --android",
+    "dev:web": "./scripts/dev.sh --web",
+    "dev:api": "./scripts/dev.sh --api-only",
+    "setup": "./scripts/dev.sh --setup --api-only",
     "deploy": "./scripts/deploy.sh api",
     "deploy:api": "./scripts/deploy.sh api",
     "deploy:api:local": "./scripts/deploy.sh api --local",

@@ -5,6 +5,7 @@ dist
 .env.production
 .env.local
 .lan-proxy.pid
+.dev/
 google-play-service-account.json
 pc-api-*.json
 
