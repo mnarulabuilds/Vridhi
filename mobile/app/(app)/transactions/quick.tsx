@@ -24,6 +24,7 @@ import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
 import { useCategorySuggestion } from '@/src/hooks/useCategorySuggestion';
 import { confirmAlert } from '@/src/utils/confirmAlert';
 import { formatCurrency } from '@/src/utils/currency';
+import { normalizeCurrencyCode } from '@/src/constants/currencies';
 import ScreenHeader from '@/src/components/navigation/ScreenHeader';
 
 type QuickType = 'EXPENSE' | 'INCOME';
@@ -69,6 +70,8 @@ export default function QuickAddTransactionScreen() {
   }, [typeCategories, categoryId]);
 
   const parsedAmount = Number(amount.replace(/,/g, ''));
+  const selectedAccount = accounts.find((account) => account.id === accountId);
+  const amountCurrency = normalizeCurrencyCode(selectedAccount?.currency);
   const selectedCategory = typeCategories.find((category) => category.id === categoryId);
   const canSave = parsedAmount > 0 && Boolean(accountId) && Boolean(categoryId);
   const debouncedTitle = useDebouncedValue(title, 280);
@@ -175,7 +178,7 @@ export default function QuickAddTransactionScreen() {
           autoFocus
         />
         <Text style={styles.amountHint}>
-          {parsedAmount > 0 ? formatCurrency(parsedAmount) : 'Type the amount'}
+          {parsedAmount > 0 ? formatCurrency(parsedAmount, amountCurrency) : 'Type the amount'}
         </Text>
 
         <Text style={styles.section}>Category</Text>

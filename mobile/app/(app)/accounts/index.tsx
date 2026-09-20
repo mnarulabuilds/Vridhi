@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { useAccounts } from '@/src/hooks/useAccounts';
+import { useNetWorth } from '@/src/hooks/useNetWorth';
+import { useReportingCurrency } from '@/src/hooks/useReportingCurrency';
 
 import {
   COLORS,
@@ -32,19 +34,16 @@ export default function AccountsScreen() {
     refreshing,
     refetch,
   } = useAccounts();
+  const { data: worth } = useNetWorth(new Date().toISOString());
 
   const activeAccounts = accounts.filter(
     account => !account.isArchived,
   );
 
-  const assets = activeAccounts
-    .filter((account) => account.kind !== 'liability')
-    .reduce((sum, account) => sum + Number(account.currentBalance ?? account.openingBalance ?? 0), 0);
-  const liabilities = activeAccounts
-    .filter((account) => account.kind === 'liability')
-    .reduce((sum, account) => sum + Number(account.currentBalance ?? 0), 0);
-  const netWorth = assets - liabilities;
-  const currency = activeAccounts[0]?.currency ?? 'INR';
+  const currency = useReportingCurrency(worth?.baseCurrency);
+  const netWorth = worth?.netWorth ?? 0;
+  const assets = worth?.assets ?? 0;
+  const liabilities = worth?.liabilities ?? 0;
 
   if (loading) {
     return (

@@ -18,11 +18,13 @@ import { formatCurrency } from '@/src/utils/currency';
 interface Props {
   income: number;
   expense: number;
+  currency?: string;
 }
 
 export default function TransactionSummary({
   income,
   expense,
+  currency = 'INR',
 }: Props) {
   const balance = income - expense;
 
@@ -45,7 +47,7 @@ export default function TransactionSummary({
           </Text>
 
           <Text style={styles.income}>
-            {formatCurrency(income)}
+            {formatCurrency(income, currency)}
           </Text>
         </View>
 
@@ -55,7 +57,7 @@ export default function TransactionSummary({
           </Text>
 
           <Text style={styles.expense}>
-            {formatCurrency(expense)}
+            {formatCurrency(expense, currency)}
           </Text>
         </View>
       </View>
@@ -67,7 +69,7 @@ export default function TransactionSummary({
       </Text>
 
       <Text style={styles.balance}>
-        {formatCurrency(balance)}
+        {formatCurrency(balance, currency)}
       </Text>
     </LinearGradient>
   );

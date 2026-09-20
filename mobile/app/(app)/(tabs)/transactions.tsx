@@ -21,6 +21,8 @@ import EmptyTransactions from '@/src/components/transactions/EmptyTransactions';
 import FloatingActionButton from '@/src/components/common/FloatingActionButton';
 import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds } from '@/src/utils/month';
+import { useReportingCurrency } from '@/src/hooks/useReportingCurrency';
+import { useAccountCurrencyLookup } from '@/src/hooks/useAccountCurrency';
 
 const TYPE_FILTERS = [
   { label: 'All', value: 'ALL' },
@@ -38,6 +40,8 @@ export default function TransactionsScreen() {
   const { accounts } = useAccounts();
   const bounds = monthBounds(new Date());
   const { data: month } = useFinancialSummary(bounds.from, bounds.to);
+  const reportingCurrency = useReportingCurrency(month?.baseCurrency);
+  const currencyForAccount = useAccountCurrencyLookup();
 
   const query = useMemo(
     () => ({
@@ -68,13 +72,13 @@ export default function TransactionsScreen() {
           <View style={styles.monthStat}>
             <Text style={styles.monthLabel}>In {bounds.label}</Text>
             <Text style={[styles.monthValue, { color: COLORS.success }]}>
-              {formatCurrency(month?.income ?? 0)}
+              {formatCurrency(month?.income ?? 0, reportingCurrency)}
             </Text>
           </View>
           <View style={styles.monthStat}>
             <Text style={styles.monthLabel}>Spent</Text>
             <Text style={[styles.monthValue, { color: COLORS.danger }]}>
-              {formatCurrency(month?.expenses ?? 0)}
+              {formatCurrency(month?.expenses ?? 0, reportingCurrency)}
             </Text>
           </View>
         </View>
@@ -128,6 +132,7 @@ export default function TransactionsScreen() {
           renderItem={({ item }) => (
             <TransactionCard
               transaction={item}
+              currency={currencyForAccount(item.accountId)}
               onPress={() => router.push(`/transactions/${item.id}`)}
             />
           )}

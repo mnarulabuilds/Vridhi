@@ -6,9 +6,11 @@ import Screen from '@/src/components/common/Screen';
 import EmptyState from '@/src/components/common/EmptyState';
 import { PortfolioApi } from '@/src/api/portfolio.api';
 import { formatCurrency } from '@/src/utils/currency';
+import { usePreferredCurrency } from '@/src/hooks/useReportingCurrency';
 import { COLORS } from '@/src/theme';
 
 export default function PortfolioScreen() {
+  const reportingCurrency = usePreferredCurrency();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['portfolio-summary'],
     queryFn: () => PortfolioApi.summary(),
@@ -36,9 +38,12 @@ export default function PortfolioScreen() {
         />
       ) : (
         <>
-          <Text style={styles.metric}>Market value {formatCurrency(data?.marketValue ?? 0)}</Text>
+          <Text style={styles.metric}>
+            Market value {formatCurrency(data?.marketValue ?? 0, reportingCurrency)}
+          </Text>
           <Text style={styles.sub}>
-            Invested {formatCurrency(data?.invested ?? 0)} · Gain {formatCurrency(data?.gain ?? 0)} (
+            Invested {formatCurrency(data?.invested ?? 0, reportingCurrency)} · Gain{' '}
+            {formatCurrency(data?.gain ?? 0, reportingCurrency)} (
             {Math.round((data?.gainPercent ?? 0) * 100)}%)
           </Text>
         </>

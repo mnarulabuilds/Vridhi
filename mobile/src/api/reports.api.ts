@@ -3,6 +3,7 @@ import { api } from './client';
 export interface FinancialSummary {
   from: string;
   to: string;
+  baseCurrency?: string;
   income: number;
   expenses: number;
   netCashFlow: number;
@@ -16,7 +17,13 @@ export interface FinancialSummary {
     remaining: number;
     utilization: number;
   }>;
-  balances: Array<{ accountId: string; name?: string; currency: string; balance: number }>;
+  balances: Array<{
+    accountId: string;
+    name?: string;
+    currency: string;
+    balance: number;
+    balanceInBase?: number;
+  }>;
 }
 
 export const ReportsApi = {
@@ -46,6 +53,7 @@ export interface InsightsReport {
 
 export interface NetWorthReport {
   asOf: string;
+  baseCurrency: string;
   assets: number;
   liabilities: number;
   netWorth: number;
@@ -54,9 +62,12 @@ export interface NetWorthReport {
     name: string;
     type: string;
     currency: string;
+    baseCurrency?: string;
     kind: 'asset' | 'liability';
     displayBalance: number;
     contribution: number;
+    displayBalanceInBase?: number;
+    contributionInBase?: number;
   }>;
   history: Array<{ month: string; assets: number; liabilities: number; netWorth: number }>;
 }

@@ -1,3 +1,4 @@
+import { createConverter, DEFAULT_USD_RATES } from './fx';
 import { liabilityOwed, positionForAccount, summarizeNetWorth } from './net-worth';
 
 const expense = (accountId: string, amount: number, date = '2026-08-10') => ({
@@ -95,5 +96,34 @@ describe('summarizeNetWorth', () => {
     expect(summary.assets).toBe(90_000);
     expect(summary.liabilities).toBe(21_000);
     expect(summary.netWorth).toBe(69_000);
+  });
+
+  it('converts mixed currencies into a base currency', () => {
+    const convert = createConverter('INR', DEFAULT_USD_RATES);
+    const summary = summarizeNetWorth(
+      [
+        {
+          id: 'usd',
+          name: 'US Checking',
+          type: 'CURRENT',
+          currency: 'USD',
+          openingBalance: 100,
+          entries: [],
+        },
+        {
+          id: 'inr',
+          name: 'HDFC',
+          type: 'SAVINGS',
+          currency: 'INR',
+          openingBalance: 0,
+          entries: [],
+        },
+      ],
+      undefined,
+      { baseCurrency: 'INR', convert },
+    );
+    expect(summary.baseCurrency).toBe('INR');
+    expect(summary.assets).toBeCloseTo(100 * 84, 2);
+    expect(summary.byAccount[0].contributionInBase).toBeCloseTo(8400, 2);
   });
 });

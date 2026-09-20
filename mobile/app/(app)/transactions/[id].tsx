@@ -18,6 +18,7 @@ import PrimaryButton from '@/src/components/form/PrimaryButton';
 
 import { useTransactions } from '@/src/hooks/useTransactions';
 import { useTransaction } from '@/src/hooks/useTransaction';
+import { useAccountCurrencyLookup } from '@/src/hooks/useAccountCurrency';
 
 import { formatCurrency } from '@/src/utils/currency';
 import { relativeDate } from '@/src/utils/date';
@@ -36,6 +37,7 @@ export default function TransactionDetailsScreen() {
   const {
     data: transaction,
   } = useTransaction(transactionId);
+  const currencyForAccount = useAccountCurrencyLookup();
 
   if (!transaction) {
     return (
@@ -111,9 +113,8 @@ export default function TransactionDetailsScreen() {
       <Info
         label="Amount"
         value={formatCurrency(
-          Number(
-            transaction.amount,
-          ),
+          Number(transaction.amount),
+          currencyForAccount(transaction.accountId),
         )}
       />
 

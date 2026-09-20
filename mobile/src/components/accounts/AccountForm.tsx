@@ -24,9 +24,10 @@ import {
   ACCOUNT_TYPE_OPTIONS,
   accountSchema,
   AccountFormSchema as AccountFormValues,
-  CURRENCIES,
   LIABILITY_ACCOUNT_TYPES,
 } from '@/src/validation/account.schema';
+import CurrencySelect from '@/src/components/form/CurrencySelect';
+import type { CurrencyCode } from '@/src/constants/currencies';
 import { confirmAlert } from '@/src/utils/confirmAlert';
 import IconPicker from './IconPicker';
 import ColorPicker from './ColorPicker';
@@ -153,16 +154,15 @@ export default function AccountForm({
         placeholder="0"
       />
 
-      <AppSelect
+      <Controller
         control={control}
         name="currency"
-        label="Currency"
-        placeholder="Select currency"
-        data={CURRENCIES.map(
-          (currency) => ({
-            label: currency,
-            value: currency,
-          }),
+        render={({ field }) => (
+          <CurrencySelect
+            label="Currency"
+            value={field.value}
+            onChange={(code) => field.onChange(code as CurrencyCode)}
+          />
         )}
       />
 

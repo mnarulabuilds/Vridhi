@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CURRENCIES } from '@/src/constants/currencies';
 
 export const ACCOUNT_TYPES = [
   'CASH',
@@ -23,13 +24,6 @@ export const ACCOUNT_TYPE_OPTIONS: Array<{ label: string; value: (typeof ACCOUNT
 ];
 
 export const LIABILITY_ACCOUNT_TYPES: readonly string[] = ['CREDIT_CARD', 'LOAN'];
-
-export const CURRENCIES = [
-  'INR',
-  'USD',
-  'EUR',
-  'GBP',
-] as const;
 
 export const accountSchema = z.object({
   name: z

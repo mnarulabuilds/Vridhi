@@ -21,7 +21,8 @@ import { relativeDate } from '@/src/utils/date';
 
 interface Props {
   transaction: Transaction;
-
+  /** Account currency for this transaction (not profile currency). */
+  currency?: string;
   onPress(): void;
 }
 
@@ -62,6 +63,7 @@ const CATEGORY_ICONS: Record<
 
 export default function TransactionCard({
   transaction,
+  currency = 'INR',
   onPress,
 }: Props) {
   const color =
@@ -132,11 +134,7 @@ export default function TransactionCard({
           ]}
         >
           {prefix}
-          {formatCurrency(
-            Number(
-              transaction.amount,
-            ),
-          )}
+          {formatCurrency(Number(transaction.amount), currency)}
         </Text>
 
         <View

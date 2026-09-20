@@ -1,4 +1,6 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+
+const SUPPORTED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'] as const;
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -9,7 +11,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(8)
+  @IsIn([...SUPPORTED_CURRENCIES])
   preferredCurrency?: string;
 
   @IsOptional()

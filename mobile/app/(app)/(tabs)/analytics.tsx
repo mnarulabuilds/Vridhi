@@ -17,6 +17,7 @@ import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds, shiftMonth } from '@/src/utils/month';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useReportingCurrency } from '@/src/hooks/useReportingCurrency';
 
 const width = Dimensions.get('window').width;
 const PALETTE = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444'];
@@ -25,6 +26,7 @@ export default function AnalyticsScreen() {
   const [month, setMonth] = useState(() => new Date());
   const bounds = monthBounds(month);
   const { data, isLoading } = useFinancialSummary(bounds.from, bounds.to);
+  const reportingCurrency = useReportingCurrency(data?.baseCurrency);
   const { data: insights } = useInsights(bounds.from);
 
   const pie = useMemo(() => {
@@ -55,7 +57,8 @@ export default function AnalyticsScreen() {
         ) : (
           <>
             <Text style={styles.metric}>
-              Spent {formatCurrency(data?.expenses ?? 0)} of {formatCurrency(data?.income ?? 0)} income
+              Spent {formatCurrency(data?.expenses ?? 0, reportingCurrency)} of{' '}
+              {formatCurrency(data?.income ?? 0, reportingCurrency)} income
             </Text>
             {(insights?.notices ?? []).map((notice) => (
               <InsightNoticeCard key={`${notice.kind}-${notice.title}`} notice={notice} />
@@ -112,7 +115,8 @@ export default function AnalyticsScreen() {
                     <View style={styles.budgetRow}>
                       <Text style={styles.budgetName}>{row.categoryName}</Text>
                       <Text style={styles.budgetAmt}>
-                        {formatCurrency(row.spent)} / {formatCurrency(row.planned)}
+                        {formatCurrency(row.spent, reportingCurrency)} /{' '}
+                        {formatCurrency(row.planned, reportingCurrency)}
                       </Text>
                     </View>
                     <View style={styles.bar}>

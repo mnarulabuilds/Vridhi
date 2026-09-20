@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ReportKind } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { cashFlow, currentBalance, savingsRate } from '../../common/money/ledger';
+import { currentBalance, savingsRate } from '../../common/money/ledger';
 import { LedgerLoaderService } from '../../common/ledger/ledger-loader.service';
 import {
   buildNotices,
@@ -11,6 +11,8 @@ import {
   monthKey,
   type LedgerTxn,
 } from '../../common/money/insights';
+import { createConverter, normalizeCurrency } from '../../common/money/fx';
+import { FxService } from '../../common/money/fx.service';
 import { summarizeNetWorth, type DatedLedgerEntry } from '../../common/money/net-worth';
 
 @Injectable()
@@ -18,7 +20,19 @@ export class ReportingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledgerLoader: LedgerLoaderService,
+    private readonly fx: FxService,
   ) {}
+
+  private async reportingCurrencyContext(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredCurrency: true },
+    });
+    const baseCurrency = normalizeCurrency(user?.preferredCurrency, 'INR');
+    const fxRates = await this.fx.getRates();
+    const convert = createConverter(baseCurrency, fxRates);
+    return { baseCurrency, fxRates, convert };
+  }
 
   async summary(userId: string, from: string, to: string) {
     const start = new Date(from);
@@ -26,6 +40,9 @@ export class ReportingService {
     if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || start > end) {
       throw new BadRequestException('Provide a valid from/to date range');
     }
+
+    const { baseCurrency, fxRates, convert } = await this.reportingCurrencyContext(userId);
+    const accountCurrency = new Map<string, string>();
 
     const [transactions, accounts, budgets] = await Promise.all([
       this.prisma.transaction.findMany({
@@ -55,17 +72,28 @@ export class ReportingService {
       }),
     ]);
 
-    const { income, expenses } = cashFlow(transactions);
+    for (const account of accounts) {
+      accountCurrency.set(account.id, account.currency ?? 'INR');
+    }
+
+    let income = 0;
+    let expenses = 0;
     const byCategory: Record<string, number> = {};
     const spentByCategoryId: Record<string, number> = {};
     for (const transaction of transactions) {
-      if (transaction.type !== 'EXPENSE') continue;
-      const amount = Number(transaction.amount);
-      const name = transaction.category?.name ?? 'Uncategorized';
-      byCategory[name] = (byCategory[name] ?? 0) + amount;
-      if (transaction.categoryId) {
-        spentByCategoryId[transaction.categoryId] =
-          (spentByCategoryId[transaction.categoryId] ?? 0) + amount;
+      const currency = accountCurrency.get(transaction.accountId) ?? 'INR';
+      const amount = convert(Number(transaction.amount), currency);
+      if (transaction.type === 'INCOME') {
+        income += amount;
+      }
+      if (transaction.type === 'EXPENSE') {
+        expenses += amount;
+        const name = transaction.category?.name ?? 'Uncategorized';
+        byCategory[name] = (byCategory[name] ?? 0) + amount;
+        if (transaction.categoryId) {
+          spentByCategoryId[transaction.categoryId] =
+            (spentByCategoryId[transaction.categoryId] ?? 0) + amount;
+        }
       }
     }
 
@@ -87,20 +115,28 @@ export class ReportingService {
       accounts.map((account) => account.id),
       { to: end },
     );
-    const balances = accounts.map((account) => ({
-      accountId: account.id,
-      name: account.name,
-      currency: account.currency,
-      balance: currentBalance(
+    const balances = accounts.map((account) => {
+      const balance = currentBalance(
         Number(account.openingBalance),
         entriesByAccount.get(account.id) ?? [],
         account.id,
-      ),
-    }));
+      );
+      const currency = account.currency ?? 'INR';
+      return {
+        accountId: account.id,
+        name: account.name,
+        currency,
+        balance,
+        balanceInBase: convert(balance, currency),
+      };
+    });
 
     return {
       from: start,
       to: end,
+      baseCurrency,
+      fxRatesAsOf: new Date().toISOString(),
+      fxRatesUsed: fxRates,
       income,
       expenses,
       netCashFlow: income - expenses,
@@ -167,6 +203,7 @@ export class ReportingService {
       userId,
       accounts.map((account) => account.id),
     );
+    const { baseCurrency, fxRates, convert } = await this.reportingCurrencyContext(userId);
     const mapped = accounts.map((account) => ({
       id: account.id,
       name: account.name,
@@ -176,11 +213,12 @@ export class ReportingService {
       createdAt: account.createdAt,
       entries: (entriesByAccount.get(account.id) ?? []) as DatedLedgerEntry[],
     }));
-    const current = summarizeNetWorth(mapped, focus);
+    const fxOptions = { baseCurrency, convert };
+    const current = summarizeNetWorth(mapped, focus, fxOptions);
     const history: Array<{ month: string; assets: number; liabilities: number; netWorth: number }> = [];
     for (let offset = 11; offset >= 0; offset -= 1) {
       const end = new Date(focus.getFullYear(), focus.getMonth() - offset + 1, 0, 23, 59, 59, 999);
-      const snap = summarizeNetWorth(mapped, end);
+      const snap = summarizeNetWorth(mapped, end, fxOptions);
       history.push({
         month: monthKey(end),
         assets: snap.assets,
@@ -190,6 +228,9 @@ export class ReportingService {
     }
     return {
       asOf: focus,
+      baseCurrency,
+      fxRatesAsOf: new Date().toISOString(),
+      fxRatesUsed: fxRates,
       assets: current.assets,
       liabilities: current.liabilities,
       netWorth: current.netWorth,

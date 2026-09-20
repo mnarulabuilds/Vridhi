@@ -16,6 +16,8 @@ import { useFinancialSummary } from '@/src/hooks/useFinancialSummary';
 import { useTransactions } from '@/src/hooks/useTransactions';
 import { useAccounts } from '@/src/hooks/useAccounts';
 import { useAuth } from '@/src/providers/auth-provider';
+import { useReportingCurrency } from '@/src/hooks/useReportingCurrency';
+import { useAccountCurrencyLookup } from '@/src/hooks/useAccountCurrency';
 import TransactionCard from '@/src/components/transactions/TransactionCard';
 import { formatCurrency } from '@/src/utils/currency';
 import { monthBounds, shiftMonth } from '@/src/utils/month';
@@ -37,11 +39,13 @@ export default function DashboardScreen() {
   const { data: insights } = useInsights(bounds.from);
   const { data: worth } = useNetWorth(bounds.to);
   const { accounts } = useAccounts();
+  const currencyForAccount = useAccountCurrencyLookup();
   const notices = (insights?.notices ?? []).filter((notice) => notice.kind !== 'info').slice(0, 2);
 
   const income = summary?.income ?? 0;
   const expenses = summary?.expenses ?? 0;
   const cashFlow = summary?.netCashFlow ?? income - expenses;
+  const reportingCurrency = useReportingCurrency(summary?.baseCurrency ?? worth?.baseCurrency);
   const netWorth = worth?.netWorth ?? 0;
   const assets = worth?.assets ?? 0;
   const liabilities = worth?.liabilities ?? 0;
@@ -72,9 +76,10 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.heroAmount}>{formatCurrency(netWorth)}</Text>
+          <Text style={styles.heroAmount}>{formatCurrency(netWorth, reportingCurrency)}</Text>
           <Text style={styles.heroSub}>
-            Assets {formatCurrency(assets)} · liabilities {formatCurrency(liabilities)}
+            Assets {formatCurrency(assets, reportingCurrency)} · liabilities{' '}
+            {formatCurrency(liabilities, reportingCurrency)}
           </Text>
           <NetWorthSpark history={worth?.history ?? []} />
           <View style={styles.monthNav}>
@@ -89,9 +94,9 @@ export default function DashboardScreen() {
         </LinearGradient>
 
         <View style={styles.stats}>
-          <Stat label="Income" value={formatCurrency(income)} color={COLORS.success} />
-          <Stat label="Expenses" value={formatCurrency(expenses)} color={COLORS.danger} />
-          <Stat label="Cash flow" value={formatCurrency(cashFlow)} color={COLORS.primary} />
+          <Stat label="Income" value={formatCurrency(income, reportingCurrency)} color={COLORS.success} />
+          <Stat label="Expenses" value={formatCurrency(expenses, reportingCurrency)} color={COLORS.danger} />
+          <Stat label="Cash flow" value={formatCurrency(cashFlow, reportingCurrency)} color={COLORS.primary} />
         </View>
 
         <View style={styles.sectionHead}>
@@ -153,6 +158,7 @@ export default function DashboardScreen() {
             <TransactionCard
               key={transaction.id}
               transaction={transaction}
+              currency={currencyForAccount(transaction.accountId)}
               onPress={() => router.push(`/transactions/${transaction.id}`)}
             />
           ))

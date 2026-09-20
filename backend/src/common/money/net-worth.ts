@@ -64,6 +64,8 @@ export function positionForAccount(input: {
   return { kind, ledgerBalance: ledger, displayBalance, contribution };
 }
 
+export type CurrencyConverter = (amount: number, fromCurrency: string) => number;
+
 export function summarizeNetWorth(
   accounts: Array<{
     id: string;
@@ -75,27 +77,38 @@ export function summarizeNetWorth(
     entries: DatedLedgerEntry[];
   }>,
   asOf?: Date,
+  options?: { baseCurrency?: string; convert?: CurrencyConverter },
 ) {
+  const baseCurrency = options?.baseCurrency ?? 'INR';
+  const convert = options?.convert ?? ((amount: number) => amount);
+
   const byAccount = accounts.map((account) => {
     const position = positionForAccount({ ...account, asOf });
+    const currency = account.currency ?? 'INR';
+    const contributionInBase = convert(position.contribution, currency);
+    const displayBalanceInBase = convert(position.displayBalance, currency);
     return {
       accountId: account.id,
       name: account.name,
       type: account.type,
-      currency: account.currency ?? 'INR',
+      currency,
+      baseCurrency,
       kind: position.kind,
       ledgerBalance: position.ledgerBalance,
       displayBalance: position.displayBalance,
       contribution: position.contribution,
+      displayBalanceInBase,
+      contributionInBase,
     };
   });
   const assets = byAccount
     .filter((row) => row.kind === 'asset')
-    .reduce((sum, row) => sum + row.contribution, 0);
+    .reduce((sum, row) => sum + row.contributionInBase, 0);
   const liabilities = byAccount
     .filter((row) => row.kind === 'liability')
-    .reduce((sum, row) => sum + row.displayBalance, 0);
+    .reduce((sum, row) => sum + row.displayBalanceInBase, 0);
   return {
+    baseCurrency,
     assets,
     liabilities,
     netWorth: assets - liabilities,

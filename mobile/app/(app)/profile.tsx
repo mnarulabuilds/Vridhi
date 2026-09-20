@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import ScreenHeader from '@/src/components/navigation/ScreenHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,30 +9,42 @@ import { COLORS, SIZES } from '@/src/theme';
 import { useAuth } from '@/src/providers/auth-provider';
 import { useBiometrics } from '@/src/providers/biometric-provider';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
+import CurrencySelect from '@/src/components/form/CurrencySelect';
+import { normalizeCurrencyCode, type CurrencyCode } from '@/src/constants/currencies';
 import { UsersApi } from '@/src/api/users.api';
 import AuthApi from '@/src/api/auth.api';
 import { Switch } from 'react-native';
 import UserStorage from '@/src/storage/user.storage';
+import { invalidateReportingQueries } from '@/src/utils/invalidateReportingQueries';
 
 export default function ProfileScreen() {
+  const queryClient = useQueryClient();
   const { user, logout, setUser } = useAuth();
   const { biometrics, toggleBiometrics } = useBiometrics();
   const [name, setName] = useState(user?.name ?? '');
-  const [currency, setCurrency] = useState(user?.preferredCurrency ?? 'INR');
+  const [currency, setCurrency] = useState<CurrencyCode>(
+    normalizeCurrencyCode(user?.preferredCurrency),
+  );
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState('');
+
+  useEffect(() => {
+    setCurrency(normalizeCurrencyCode(user?.preferredCurrency));
+    setName(user?.name ?? '');
+  }, [user?.preferredCurrency, user?.name]);
 
   async function saveProfile() {
     setSaving(true);
     try {
       const updated = await UsersApi.update({
         name: name.trim(),
-        preferredCurrency: currency.trim().toUpperCase() || 'INR',
+        preferredCurrency: currency,
       });
       setUser(updated);
       await UserStorage.saveCurrentUser(updated);
+      await invalidateReportingQueries(queryClient);
       Alert.alert('Saved', 'Profile updated');
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message ?? 'Could not update profile');
@@ -89,8 +102,12 @@ export default function ProfileScreen() {
 
         <Text style={styles.label}>Name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
-        <Text style={styles.label}>Preferred currency</Text>
-        <TextInput style={styles.input} value={currency} autoCapitalize="characters" onChangeText={setCurrency} />
+        <CurrencySelect
+          label="Preferred currency"
+          value={currency}
+          onChange={setCurrency}
+          accessibilityLabel="Preferred currency for reports and net worth"
+        />
         <PrimaryButton title="Save profile" loading={saving} onPress={saveProfile} />
 
         <View style={styles.row}>

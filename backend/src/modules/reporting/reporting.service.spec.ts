@@ -7,11 +7,15 @@ describe('ReportingService', () => {
     account: { findMany: jest.fn() },
     budget: { findMany: jest.fn() },
     reportRun: { create: jest.fn() },
+    user: { findUnique: jest.fn().mockResolvedValue({ preferredCurrency: 'INR' }) },
   };
   const ledgerLoader = {
     loadEntriesForAccounts: jest.fn().mockResolvedValue(new Map([['a1', []]])),
   };
-  const service = new ReportingService(prisma as any, ledgerLoader as any);
+  const fx = {
+    getRates: jest.fn().mockResolvedValue({ USD: 1, INR: 84, EUR: 0.92, GBP: 0.79 }),
+  };
+  const service = new ReportingService(prisma as any, ledgerLoader as any, fx as any);
 
   beforeEach(() => jest.clearAllMocks());
 
