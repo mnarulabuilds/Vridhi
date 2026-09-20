@@ -22,6 +22,14 @@ describe('CategoriesService', () => {
     );
   });
 
+  it('can include archived categories', async () => {
+    prisma.category.findMany.mockResolvedValue([]);
+    await service.findAll('u1', true);
+    expect(prisma.category.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'u1' } }),
+    );
+  });
+
   it('creates a trimmed category', async () => {
     prisma.category.create.mockResolvedValue({ id: 'c1', name: 'Fuel' });
     await service.create('u1', { name: '  Fuel  ', type: 'EXPENSE' as any });
@@ -44,6 +52,16 @@ describe('CategoriesService', () => {
     prisma.category.findFirst.mockResolvedValueOnce({ id: 'c1' });
     await service.unarchive('u1', 'c1');
     expect(prisma.category.update).toHaveBeenCalledTimes(2);
+  });
+
+  it('rethrows unexpected prisma errors', async () => {
+    prisma.category.create.mockRejectedValue(new Error('db down'));
+    await expect(service.create('u1', { name: 'Fuel', type: 'EXPENSE' as any })).rejects.toThrow('db down');
+  });
+
+  it('throws when unarchive target is missing', async () => {
+    prisma.category.findFirst.mockResolvedValue(null);
+    await expect(service.unarchive('u1', 'c1')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('throws when archive target is missing', async () => {

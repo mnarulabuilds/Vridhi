@@ -17,6 +17,11 @@ describe('parsePeriod', () => {
     const period = parsePeriod('income in june', NOW);
     expect(period.periodLabel).toBe('June 2026');
   });
+
+  it('uses the prior year for a future month without an explicit year', () => {
+    const period = parsePeriod('spending in december', NOW);
+    expect(period.periodLabel).toBe('December 2025');
+  });
 });
 
 describe('classifyIntent', () => {
@@ -33,6 +38,10 @@ describe('classifyIntent', () => {
   it('detects insights', () => {
     expect(classifyIntent('What bills repeat?', NOW).kind).toBe('insights');
     expect(classifyIntent('Is anything unusual this month?', NOW).kind).toBe('insights');
+  });
+
+  it('detects portfolio questions', () => {
+    expect(classifyIntent('How is my mutual fund portfolio?', NOW).kind).toBe('portfolio');
   });
 
   it('detects budgets, balances, and net worth', () => {

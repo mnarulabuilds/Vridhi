@@ -4,6 +4,7 @@ import { ReportingService } from '../reporting/reporting.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { AccountsService } from '../accounts/accounts.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatDto } from './dto/chat.dto';
 import { TransactionType } from '../transactions/enum/transaction-type.enum';
@@ -22,6 +23,7 @@ import {
   renderCategorySpend,
   renderInsights,
   renderNetWorth,
+  renderPortfolio,
   renderRecent,
   renderSummary,
   type SummarySnapshot,
@@ -143,6 +145,7 @@ export class AiService {
     private readonly transactions: TransactionsService,
     private readonly accounts: AccountsService,
     private readonly budgets: BudgetsService,
+    private readonly portfolio: PortfolioService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -246,6 +249,11 @@ export class AiService {
         const report = await this.reporting.netWorth(userId, intent.to);
         sources.push('get_net_worth');
         return { text: renderNetWorth(intent.periodLabel, report, currency), sources };
+      }
+      case 'portfolio': {
+        const report = await this.portfolio.summary(userId);
+        sources.push('portfolio_summary');
+        return { text: renderPortfolio(intent.periodLabel, report, currency), sources };
       }
       case 'recent': {
         const page = await this.transactions.findAll(userId, {

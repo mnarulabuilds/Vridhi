@@ -5,9 +5,10 @@ import { AccountsModule } from '../accounts/accounts.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BudgetsModule } from '../budgets/budgets.module';
 import { ReportingModule } from '../reporting/reporting.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
 
 @Module({
-  imports: [AccountsModule, TransactionsModule, BudgetsModule, ReportingModule],
+  imports: [AccountsModule, TransactionsModule, BudgetsModule, ReportingModule, PortfolioModule],
   controllers: [AiController],
   providers: [AiService],
 })

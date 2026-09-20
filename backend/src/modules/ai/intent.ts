@@ -4,6 +4,7 @@ export type IntentKind =
   | 'budgets'
   | 'balances'
   | 'net_worth'
+  | 'portfolio'
   | 'category_spend'
   | 'recent'
   | 'unknown';
@@ -131,6 +132,14 @@ export function classifyIntent(message: string, now = new Date()): ClassifiedInt
 
   if (/\b(net worth|networth|assets? (?:and|vs\.?|versus) liabilities)\b/i.test(text)) {
     return { kind: 'net_worth', ...base };
+  }
+
+  if (
+    /\b(portfolio|investments?|holdings?|mutual funds?|stocks?|market value|gain(?:s)? on investments?)\b/i.test(
+      text,
+    )
+  ) {
+    return { kind: 'portfolio', ...base };
   }
 
   if (

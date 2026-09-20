@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for api/error.ts</title>
+    <title>Code coverage report for constants/currencies.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">api</a> error.ts</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">constants</a> currencies.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.9% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>10/11</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">75% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>12/16</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>9/10</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
@@ -83,71 +83,47 @@
 <a name='L18'></a><a href='#L18'>18</a>
 <a name='L19'></a><a href='#L19'>19</a>
 <a name='L20'></a><a href='#L20'>20</a>
-<a name='L21'></a><a href='#L21'>21</a>
-<a name='L22'></a><a href='#L22'>22</a>
-<a name='L23'></a><a href='#L23'>23</a>
-<a name='L24'></a><a href='#L24'>24</a>
-<a name='L25'></a><a href='#L25'>25</a>
-<a name='L26'></a><a href='#L26'>26</a>
-<a name='L27'></a><a href='#L27'>27</a>
-<a name='L28'></a><a href='#L28'>28</a>
-<a name='L29'></a><a href='#L29'>29</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L21'></a><a href='#L21'>21</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import axios from 'axios';
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'] as const;
 &nbsp;
-function normalizeMessage(message: unknown): string | undefined {
-  if (typeof message === 'string' &amp;&amp; message.trim()) {
-    return message;
-  }
-  <span class="missing-if-branch" title="else path not taken" >E</span>if (Array.isArray(message)) {
-    const parts = message.filter((part): part is string =&gt; typeof part === 'string' &amp;&amp; part.trim());
-    <span class="missing-if-branch" title="else path not taken" >E</span>if (parts.length) {
-      return parts.join('\n');
-    }
-  }
-<span class="cstat-no" title="statement not covered" >  return undefined;</span>
+export type CurrencyCode = (typeof CURRENCIES)[number];
+&nbsp;
+export const CURRENCY_OPTIONS: Array&lt;{ label: string; value: CurrencyCode }&gt; = [
+  { label: 'INR — Indian rupee', value: 'INR' },
+  { label: 'USD — US dollar', value: 'USD' },
+  { label: 'EUR — Euro', value: 'EUR' },
+  { label: 'GBP — British pound', value: 'GBP' },
+];
+&nbsp;
+export function normalizeCurrencyCode(
+  value: string | undefined | null,
+  fallback: CurrencyCode = 'INR',
+): CurrencyCode {
+  const upper = String(value ?? '')
+    .trim()
+    .toUpperCase();
+  return CURRENCIES.includes(upper as CurrencyCode) ? (upper as CurrencyCode) : fallback;
 }
-&nbsp;
-export function getApiErrorMessage(
-  error: unknown,
-  fallback = 'Something went wrong.',
-): string {
-  if (axios.isAxiosError(error)) {
-    return (
-      normalizeMessage(error.response?.data?.message) ??
-<span class="branch-1 cbranch-no" title="branch not covered" >      error.message </span>??
-<span class="branch-2 cbranch-no" title="branch not covered" >      fallback</span>
-    );
-  }
-&nbsp;
-  return fallback;
-}</pre></td></tr></table></pre>
+&nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->

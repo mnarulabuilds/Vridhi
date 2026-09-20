@@ -16,6 +16,7 @@ import { ConnectionsModule } from './modules/connections/connections.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { KycModule } from './modules/kyc/kyc.module';
 import { LedgerModule } from './common/ledger/ledger.module';
 import { EmailModule } from './common/email/email.module';
 import { EntitlementsModule } from './common/entitlements/entitlements.module';
@@ -50,6 +51,7 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
     PortfolioModule,
     GoalsModule,
     SubscriptionsModule,
+    KycModule,
   ],
   controllers: [HealthController],
   providers: [

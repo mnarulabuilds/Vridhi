@@ -26,6 +26,22 @@ describe('PortfolioService', () => {
     expect(summary.gain).toBe(200);
   });
 
+  it('values holdings without lastPrice', async () => {
+    prisma.holding.findMany.mockResolvedValue([
+      { costBasis: 100, quantity: 2, lastPrice: null, assetClass: 'DEBT' },
+    ]);
+    const summary = await service.summary('u1');
+    expect(summary.marketValue).toBe(100);
+  });
+
+  it('updates an existing holding', async () => {
+    prisma.holding.findFirst.mockResolvedValue({ id: 'h1' });
+    prisma.holding.update.mockResolvedValue({ id: 'h1', symbol: 'INFY' });
+    await expect(
+      service.upsertHolding('u1', { id: 'h1', symbol: 'INFY', name: 'Infosys', quantity: 2, costBasis: 200 }),
+    ).resolves.toMatchObject({ symbol: 'INFY' });
+  });
+
   it('creates and deletes holdings', async () => {
     prisma.holding.create.mockResolvedValue({ id: 'h1' });
     prisma.holding.findFirst.mockResolvedValue({ id: 'h1' });

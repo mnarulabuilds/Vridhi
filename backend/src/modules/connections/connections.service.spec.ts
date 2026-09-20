@@ -49,4 +49,47 @@ describe('ConnectionsService', () => {
     prisma.financialConnection.update.mockResolvedValue({ id: 'c1', status: 'LINKED' });
     await expect(service.sync('u1', 'c1')).resolves.toMatchObject({ id: 'c1' });
   });
+
+  it('imports synced transactions and skips duplicates', async () => {
+    prisma.financialConnection.findFirst.mockResolvedValue({
+      id: 'c1',
+      externalItemId: 'item',
+      externalAccounts: [
+        {
+          account: { id: 'acc-1' },
+        },
+      ],
+    });
+    aggregator.syncTransactions.mockResolvedValue({
+      transactions: [
+        {
+          title: 'Coffee',
+          amount: 120,
+          type: 'EXPENSE',
+          merchant: 'Cafe',
+          transactionDate: new Date('2026-01-02'),
+          externalId: 'ext-1',
+        },
+      ],
+    });
+    prisma.transaction.create.mockResolvedValue({});
+    prisma.financialConnection.update.mockResolvedValue({ id: 'c1', status: 'LINKED' });
+    await expect(service.sync('u1', 'c1')).resolves.toMatchObject({ status: 'LINKED' });
+  });
+
+  it('marks connection ERROR when sync fails', async () => {
+    prisma.financialConnection.findFirst.mockResolvedValue({
+      id: 'c1',
+      externalItemId: 'item',
+      externalAccounts: [],
+    });
+    aggregator.syncTransactions.mockRejectedValue(new Error('provider down'));
+    prisma.financialConnection.update.mockResolvedValue({});
+    await expect(service.sync('u1', 'c1')).rejects.toThrow('provider down');
+    expect(prisma.financialConnection.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'ERROR' }),
+      }),
+    );
+  });
 });

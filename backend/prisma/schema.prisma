@@ -71,6 +71,13 @@ enum ReportKind {
   TAX_SUMMARY
 }
 
+enum KycStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id                    String    @id @default(cuid())
   name                  String
@@ -92,11 +99,36 @@ model User {
   holdings            Holding[]
   goals               Goal[]
   reportRuns          ReportRun[]
+  kycProfile          KycProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+model KycProfile {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  status             KycStatus @default(NOT_STARTED)
+  fullLegalName      String?
+  panNumber          String?
+  dateOfBirth        DateTime?
+  addressLine1       String?
+  addressCity        String?
+  addressState       String?
+  addressPostalCode  String?
+  documentType       String?
+  documentReference  String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("kyc_profiles")
 }
 
 model Account {

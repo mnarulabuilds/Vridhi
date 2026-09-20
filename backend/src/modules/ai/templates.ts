@@ -208,6 +208,30 @@ export function renderNetWorth(
   return lines.join(' ');
 }
 
+export function renderPortfolio(
+  periodLabel: string,
+  summary: {
+    marketValue: number;
+    invested: number;
+    gain: number;
+    gainPercent: number;
+    allocation?: Record<string, number>;
+  },
+  currency = 'INR',
+) {
+  const lines = [
+    `Investment portfolio (${periodLabel}): market value ${formatMoney(summary.marketValue, currency)}.`,
+    `Invested ${formatMoney(summary.invested, currency)} · unrealized gain ${formatMoney(summary.gain, currency)} (${formatPct(summary.gainPercent)}).`,
+  ];
+  const classes = Object.entries(summary.allocation ?? {});
+  if (classes.length) {
+    lines.push(
+      `Allocation: ${classes.map(([name, value]) => `${name} ${formatMoney(value, currency)}`).join(', ')}.`,
+    );
+  }
+  return lines.join(' ');
+}
+
 export const FALLBACK_HELP =
   'I can answer from your recorded books without a language model: this month’s spending, savings rate, net worth, account balances, budgets, recent transactions, recurring bills, and unusual spend. For open chat, run Ollama locally (AI_PROVIDER=ollama) or set OPENAI_API_KEY.';
 

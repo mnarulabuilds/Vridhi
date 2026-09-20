@@ -1,7 +1,13 @@
 import {
   FALLBACK_HELP,
   matchCategory,
+  renderBalances,
+  renderBudgets,
   renderCategorySpend,
+  renderInsights,
+  renderNetWorth,
+  renderPortfolio,
+  renderRecent,
   renderSummary,
 } from './templates';
 
@@ -35,5 +41,43 @@ describe('templates', () => {
 
   it('keeps a fallback that does not call a model', () => {
     expect(FALLBACK_HELP).toContain('recorded books');
+  });
+
+  it('renders balances, budgets, insights, net worth, portfolio, and recent', () => {
+    expect(renderBalances([], { ...summary, balances: [{ name: 'Cash', balance: 100, currency: 'INR' }] })).toContain(
+      'Balances',
+    );
+    expect(renderBudgets('August 2026', [], summary)).toContain('budget');
+    expect(renderInsights('August 2026', [])).toContain('No pattern notices');
+    expect(
+      renderInsights('August 2026', [{ title: 'Spike', detail: 'Dining up', severity: 'warning', kind: 'trend' }]),
+    ).toContain('Spike');
+    expect(
+      renderNetWorth('August 2026', {
+        assets: 100,
+        liabilities: 20,
+        netWorth: 80,
+        byAccount: [{ name: 'Loan', kind: 'liability', displayBalance: 20 }],
+      }),
+    ).toContain('Owed');
+    expect(
+      renderPortfolio('August 2026', {
+        marketValue: 1000,
+        invested: 800,
+        gain: 200,
+        gainPercent: 0.25,
+        allocation: { EQUITY: 1000 },
+      }),
+    ).toContain('Allocation');
+    expect(renderRecent('August 2026', [])).toContain('No transactions');
+    expect(
+      renderRecent('August 2026', [
+        { title: 'Tea', amount: 10, type: 'EXPENSE', category: { name: 'Dining' } } as never,
+      ]),
+    ).toContain('Tea');
+  });
+
+  it('returns null for empty category hints', () => {
+    expect(matchCategory(summary.spendingByCategory, '')).toBeNull();
   });
 });

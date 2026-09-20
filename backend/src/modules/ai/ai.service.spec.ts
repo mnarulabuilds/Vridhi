@@ -17,6 +17,15 @@ describe('AiService', () => {
   const transactions = { findAll: jest.fn() };
   const accounts = { findAll: jest.fn() };
   const budgets = { findForPeriod: jest.fn() };
+  const portfolio = {
+    summary: jest.fn().mockResolvedValue({
+      marketValue: 2000,
+      invested: 1500,
+      gain: 500,
+      gainPercent: 0.33,
+      allocation: { EQUITY: 2000 },
+    }),
+  };
   const prisma = {
     user: { findUnique: jest.fn().mockResolvedValue({ preferredCurrency: 'INR' }) },
     aiConversation: {
@@ -34,6 +43,7 @@ describe('AiService', () => {
     transactions as any,
     accounts as any,
     budgets as any,
+    portfolio as any,
     prisma as any,
   );
 
@@ -112,6 +122,7 @@ describe('AiService', () => {
       'What bills repeat?',
       'Show recent transactions',
       'How much did I spend on groceries this month?',
+      'How is my investment portfolio doing?',
     ];
     for (const content of cases) {
       const res = await service.chat('u1', { messages: [{ role: 'user', content }] });

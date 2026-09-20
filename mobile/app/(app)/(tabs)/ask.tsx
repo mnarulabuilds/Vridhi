@@ -23,6 +23,7 @@ interface ChatItem {
 const SUGGESTIONS = [
   'How much did I spend this month?',
   "What's my net worth?",
+  'How is my investment portfolio doing?',
   'What bills repeat?',
   'Is anything unusual this month?',
   'Account balances',

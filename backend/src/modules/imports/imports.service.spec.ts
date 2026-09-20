@@ -86,6 +86,54 @@ describe('ImportsService', () => {
     expect(result.skipped).toBe(1);
   });
 
+  it('imports income from credit column', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.category.findMany.mockResolvedValue([
+      { id: 'inc', type: 'INCOME', name: 'Other Income' },
+      { id: 'exp', type: 'EXPENSE', name: 'Other' },
+    ]);
+    prisma.transaction.create.mockResolvedValue({});
+    const result = await service.commit('u1', {
+      accountId: 'a1',
+      header: ['Date', 'Amount', 'Type', 'Title'],
+      mapping: { date: 'Date', amount: 'Amount', type: 'Type', title: 'Title' },
+      rows: [['2026-01-01', '-500', 'CREDIT', 'Refund']],
+    });
+    expect(result.created).toBe(1);
+  });
+
+  it('records row errors for invalid dates and amounts', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.category.findMany.mockResolvedValue([
+      { id: 'inc', type: 'INCOME', name: 'Other Income' },
+      { id: 'exp', type: 'EXPENSE', name: 'Other' },
+    ]);
+    const result = await service.commit('u1', {
+      accountId: 'a1',
+      header: ['Date', 'Amount', 'Title'],
+      mapping: { date: 'Date', amount: 'Amount', title: 'Title' },
+      rows: [
+        ['not-a-date', '10', 'Bad date'],
+        ['2026-01-01', '', 'Missing amount'],
+      ],
+    });
+    expect(result.created).toBe(0);
+    expect(result.errors.length).toBe(2);
+  });
+
+  it('requires default categories', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.category.findMany.mockResolvedValue([]);
+    await expect(
+      service.commit('u1', {
+        accountId: 'a1',
+        header: ['Date', 'Amount'],
+        mapping: { date: 'Date', amount: 'Amount' },
+        rows: [['2026-01-01', '10']],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('requires a valid account', async () => {
     prisma.account.findFirst.mockResolvedValue(null);
     await expect(

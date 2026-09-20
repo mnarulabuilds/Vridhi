@@ -38,6 +38,9 @@ export default function AppLayout() {
       <Stack.Screen name="settings" />
       <Stack.Screen name="portfolio" />
       <Stack.Screen name="subscription" />
+      <Stack.Screen name="help" />
+      <Stack.Screen name="kyc" />
+      <Stack.Screen name="bank-connections" />
       <Stack.Screen name="accounts/index" />
       <Stack.Screen name="accounts/create" options={{ title: 'Create Account' }} />
       <Stack.Screen name="accounts/[id]" options={{ title: 'Edit Account' }} />

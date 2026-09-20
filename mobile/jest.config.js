@@ -6,6 +6,8 @@ module.exports = {
     'src/utils/currency.ts',
     'src/utils/month.ts',
     'src/api/error.ts',
+    'src/constants/currencies.ts',
+    'src/content/help-center.ts',
     '!src/**/*.test.ts',
   ],
   coverageThreshold: {

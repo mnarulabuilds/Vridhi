@@ -165,12 +165,23 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <Text style={styles.section}>Premium & data</Text>
-        <Text style={styles.link} onPress={() => router.push('/subscription')} accessibilityRole="button">
-          Subscription & ads
+        <Text style={styles.section}>Money & growth</Text>
+        <Text style={styles.navLink} onPress={() => router.push('/bank-connections')} accessibilityRole="button">
+          Link bank accounts
         </Text>
-        <Text style={styles.link} onPress={() => router.push('/portfolio')} accessibilityRole="button">
+        <Text style={styles.navLink} onPress={() => router.push('/kyc')} accessibilityRole="button">
+          Identity verification (KYC)
+        </Text>
+        <Text style={styles.navLink} onPress={() => router.push('/portfolio')} accessibilityRole="button">
           Investment portfolio
+        </Text>
+        <Text style={styles.navLink} onPress={() => router.push('/help')} accessibilityRole="button">
+          Help, tips & FAQs
+        </Text>
+
+        <Text style={styles.section}>Premium & data</Text>
+        <Text style={styles.navLink} onPress={() => router.push('/subscription')} accessibilityRole="button">
+          Subscription & ads
         </Text>
 
         <Text style={styles.section}>Categories</Text>
@@ -271,6 +282,7 @@ const styles = StyleSheet.create({
   label: { color: COLORS.text, flex: 1 },
   archivedLabel: { color: COLORS.textLight, flex: 1 },
   link: { color: COLORS.danger, fontWeight: '700' },
+  navLink: { color: COLORS.primary, fontWeight: '700', marginBottom: 10 },
   restore: { color: COLORS.primary, fontWeight: '700' },
   inline: { gap: 10, marginBottom: 12 },
   input: {

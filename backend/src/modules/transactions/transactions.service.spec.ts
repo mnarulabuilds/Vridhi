@@ -18,6 +18,20 @@ describe('TransactionsService', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
+  it('requires a valid account', async () => {
+    prisma.account.findFirst.mockResolvedValue(null);
+    await expect(
+      service.create('u1', {
+        title: 'Coffee',
+        amount: 10,
+        type: TransactionType.EXPENSE,
+        categoryId: 'c1',
+        transactionDate: '2026-08-01',
+        accountId: 'missing',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('requires category for expenses', async () => {
     prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
     await expect(
@@ -46,6 +60,49 @@ describe('TransactionsService', () => {
     expect(row).toEqual({ id: 't1' });
   });
 
+  it('rejects transfer without destination', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    await expect(
+      service.create('u1', {
+        title: 'Move',
+        amount: 50,
+        type: TransactionType.TRANSFER,
+        transactionDate: '2026-08-01',
+        accountId: 'a1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects mismatched category type', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.category.findFirst.mockResolvedValue({ id: 'c1', type: TransactionType.INCOME });
+    await expect(
+      service.create('u1', {
+        title: 'Coffee',
+        amount: 10,
+        type: TransactionType.EXPENSE,
+        categoryId: 'c1',
+        transactionDate: '2026-08-01',
+        accountId: 'a1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates income with category', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.category.findFirst.mockResolvedValue({ id: 'c1', type: TransactionType.INCOME });
+    prisma.transaction.create.mockResolvedValue({ id: 't1' });
+    await service.create('u1', {
+      title: 'Salary',
+      amount: 1000,
+      type: TransactionType.INCOME,
+      categoryId: 'c1',
+      transactionDate: '2026-08-01',
+      accountId: 'a1',
+    });
+    expect(prisma.transaction.create).toHaveBeenCalled();
+  });
+
   it('validates transfer destinations', async () => {
     prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
     await expect(
@@ -58,6 +115,21 @@ describe('TransactionsService', () => {
         transferToAccountId: 'a1',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('finds a transaction by id', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({ id: 't1' });
+    await expect(service.findOne('u1', 't1')).resolves.toEqual({ id: 't1' });
+  });
+
+  it('applies cursor pagination when cursor exists', async () => {
+    prisma.transaction.findFirst.mockResolvedValueOnce({
+      id: 'cursor',
+      transactionDate: new Date('2026-08-02'),
+    });
+    prisma.transaction.findMany.mockResolvedValue([{ id: 't1', transactionDate: new Date('2026-08-01') }]);
+    const page = await service.findAll('u1', { limit: 10, cursor: 'cursor' });
+    expect(page.items).toHaveLength(1);
   });
 
   it('paginates list results', async () => {
@@ -99,6 +171,22 @@ describe('TransactionsService', () => {
       transferToAccountId: 'a2',
     });
     expect(prisma.transaction.create).toHaveBeenCalled();
+  });
+
+  it('updates a transfer destination', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 't1',
+      type: TransactionType.TRANSFER,
+      accountId: 'a1',
+      transferToAccountId: 'a2',
+      categoryId: null,
+    });
+    prisma.account.findFirst.mockImplementation(({ where }: { where: { id: string } }) =>
+      Promise.resolve({ id: where.id }),
+    );
+    prisma.transaction.update.mockResolvedValue({ id: 't1' });
+    await service.update('u1', 't1', { transferToAccountId: 'a3' });
+    expect(prisma.transaction.update).toHaveBeenCalled();
   });
 
   it('updates an expense category', async () => {
