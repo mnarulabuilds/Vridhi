@@ -98,7 +98,15 @@ export class AccountsService {
 
   async update(userId: string, accountId: string, dto: UpdateAccountDto) {
     await this.getAccountOrThrow(userId, accountId);
-    await this.prisma.account.update({ where: { id: accountId }, data: dto });
+    const data = {
+      ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+      ...(dto.type !== undefined ? { type: dto.type } : {}),
+      ...(dto.openingBalance !== undefined ? { openingBalance: dto.openingBalance } : {}),
+      ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
+      ...(dto.icon !== undefined ? { icon: dto.icon?.trim() ? dto.icon.trim() : null } : {}),
+      ...(dto.color !== undefined ? { color: dto.color?.trim() ? dto.color.trim() : null } : {}),
+    };
+    await this.prisma.account.update({ where: { id: accountId }, data });
     return this.findOne(userId, accountId);
   }
 

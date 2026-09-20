@@ -25,10 +25,8 @@ import ScreenContainer from '@/src/components/ScreenContainer';
 import { categoryLabel } from '@/src/api/transactions.api';
 
 export default function TransactionDetailsScreen() {
-  const { id } =
-    useLocalSearchParams<{
-      id: string;
-    }>();
+  const { id } = useLocalSearchParams<{ id: string | string[] }>();
+  const transactionId = Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
 
   const {
     deleteTransaction,
@@ -37,14 +35,18 @@ export default function TransactionDetailsScreen() {
 
   const {
     data: transaction,
-  } = useTransaction(id);
+  } = useTransaction(transactionId);
 
   if (!transaction) {
     return (
-      <ScreenContainer>
-        <Text>
-          Transaction not found.
-        </Text>
+      <ScreenContainer
+        title="Transaction"
+        breadcrumbs={[
+          { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+          { label: 'Details' },
+        ]}
+      >
+        <Text>Transaction not found.</Text>
       </ScreenContainer>
     );
   }
@@ -52,7 +54,7 @@ export default function TransactionDetailsScreen() {
   async function handleDelete() {
     const deleteAction = async () => {
       try {
-        await deleteTransaction(id);
+        await deleteTransaction(transactionId);
         router.back();
       } catch (error: any) {
         Alert.alert(
@@ -96,6 +98,10 @@ export default function TransactionDetailsScreen() {
     <ScreenContainer
       title="Transaction"
       scrollable
+      breadcrumbs={[
+        { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+        { label: 'Details' },
+      ]}
     >
       <Info
         label="Title"
@@ -150,9 +156,7 @@ export default function TransactionDetailsScreen() {
         <PrimaryButton
           title="Edit"
           onPress={() =>
-            router.push(
-              `/transactions/${id}/edit`,
-            )
+            router.push(`/transactions/${transactionId}/edit`)
           }
         />
 

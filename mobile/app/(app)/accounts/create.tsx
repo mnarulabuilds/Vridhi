@@ -34,7 +34,14 @@ export default function CreateAccountScreen() {
   }
 
   return (
-    <ScreenContainer scrollable>
+    <ScreenContainer
+      scrollable
+      title="New account"
+      breadcrumbs={[
+        { label: 'Accounts', href: '/accounts' },
+        { label: 'New' },
+      ]}
+    >
       <AccountForm
         submitText="Create Account"
         onSubmit={onSubmit}

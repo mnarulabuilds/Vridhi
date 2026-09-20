@@ -40,7 +40,11 @@ export default function AppLayout() {
       <Stack.Screen name="subscription" />
       <Stack.Screen name="accounts/index" />
       <Stack.Screen name="accounts/create" options={{ title: 'Create Account' }} />
+      <Stack.Screen name="accounts/[id]" options={{ title: 'Edit Account' }} />
       <Stack.Screen name="transactions/quick" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="transactions/[id]" />
+      <Stack.Screen name="transactions/[id]/edit" />
+      <Stack.Screen name="transactions/create" />
     </Stack>
   );
 }

@@ -9,10 +9,12 @@ import { useCategories } from '@/src/hooks/useCategories';
 import { TransactionFormValues } from '@/src/validation/transaction.schema';
 import ScreenContainer from '@/src/components/ScreenContainer';
 import { confirmAlert } from '@/src/utils/confirmAlert';
+import { getApiErrorMessage } from '@/src/api/error';
 
 export default function EditTransactionScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: transaction, isLoading } = useTransaction(id);
+  const { id } = useLocalSearchParams<{ id: string | string[] }>();
+  const transactionId = Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
+  const { data: transaction, isLoading } = useTransaction(transactionId);
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories } = useCategories();
   const { updateTransaction, updating } = useTransactions();
@@ -20,7 +22,7 @@ export default function EditTransactionScreen() {
   async function handleSubmit(values: TransactionFormValues) {
     try {
       await updateTransaction({
-        id,
+        id: transactionId,
         payload: {
           title: values.title,
           amount: values.amount,
@@ -33,26 +35,49 @@ export default function EditTransactionScreen() {
           transferToAccountId: values.type === 'TRANSFER' ? values.transferToAccountId : undefined,
         },
       });
-      router.push('/transactions');
-    } catch (error: any) {
-      confirmAlert('Error', error?.response?.data?.message ?? 'Unable to update transaction.');
+      router.back();
+    } catch (error: unknown) {
+      confirmAlert('Error', getApiErrorMessage(error, 'Unable to update transaction.'));
     }
   }
 
   if (isLoading || accountsLoading) {
     return (
-      <ScreenContainer title="Edit Transaction">
+      <ScreenContainer
+        title="Edit transaction"
+        breadcrumbs={[
+          { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+          { label: 'Edit' },
+        ]}
+      >
         <ActivityIndicator />
       </ScreenContainer>
     );
   }
 
   if (!transaction) {
-    return <ScreenContainer title="Edit Transaction">Transaction not found.</ScreenContainer>;
+    return (
+      <ScreenContainer
+        title="Edit transaction"
+        breadcrumbs={[
+          { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+          { label: 'Edit' },
+        ]}
+      >
+        Transaction not found.
+      </ScreenContainer>
+    );
   }
 
   return (
-    <ScreenContainer title="Edit Transaction" scrollable>
+    <ScreenContainer
+      title="Edit transaction"
+      scrollable
+      breadcrumbs={[
+        { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+        { label: 'Edit' },
+      ]}
+    >
       <TransactionForm
         accounts={accounts}
         categories={categories}

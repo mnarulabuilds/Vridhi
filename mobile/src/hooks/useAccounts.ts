@@ -63,7 +63,10 @@ export function useAccounts() {
         payload,
       ),
 
-    onSuccess: invalidate,
+    onSuccess: (_data, { id }) => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ['account', id] });
+    },
   });
 
   /**
@@ -73,7 +76,10 @@ export function useAccounts() {
     mutationFn: (id: string) =>
       AccountsService.archiveAccount(id),
 
-    onSuccess: invalidate,
+    onSuccess: (_data, id) => {
+      invalidate();
+      queryClient.removeQueries({ queryKey: ['account', id] });
+    },
   });
 
   return {

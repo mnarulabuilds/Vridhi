@@ -11,4 +11,10 @@ describe('getApiErrorMessage', () => {
   it('falls back to default', () => {
     expect(getApiErrorMessage({})).toBe('Something went wrong.');
   });
+
+  it('joins validation message arrays', () => {
+    const error = new axios.AxiosError('fail');
+    error.response = { data: { message: ['name must be longer', 'type is invalid'] } } as never;
+    expect(getApiErrorMessage(error)).toContain('name must be longer');
+  });
 });

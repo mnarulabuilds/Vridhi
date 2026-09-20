@@ -64,6 +64,26 @@ describe('AccountsService', () => {
     await expect(service.findOne('u1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('updates account fields', async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
+    prisma.account.update.mockResolvedValue({ id: 'a1' });
+    ledgerLoader.loadEntriesForAccounts.mockResolvedValue(new Map([['a1', []]]));
+    prisma.account.findUniqueOrThrow.mockResolvedValue({
+      id: 'a1',
+      name: 'Updated',
+      type: 'SAVINGS',
+      openingBalance: 50,
+      currency: 'INR',
+    });
+    const updated = await service.update('u1', 'a1', { name: ' Updated ', icon: '  ' });
+    expect(prisma.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ name: 'Updated', icon: null }),
+      }),
+    );
+    expect(updated.name).toBe('Updated');
+  });
+
   it('archives an account', async () => {
     prisma.account.findFirst.mockResolvedValue({ id: 'a1' });
     prisma.account.update.mockResolvedValue({ id: 'a1', isArchived: true });

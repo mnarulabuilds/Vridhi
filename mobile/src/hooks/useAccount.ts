@@ -12,12 +12,8 @@ import {
 export function useAccount(id: string) {
     const ACCOUNT_QUERY_KEY = ['account', id];
 
-    /**
-       * Fetch accounts
-       */
-
     const {
-        data: account = {},
+        data: account,
         isLoading,
         isRefetching,
         error,
@@ -25,6 +21,7 @@ export function useAccount(id: string) {
     } = useQuery<Account>({
         queryKey: ACCOUNT_QUERY_KEY,
         queryFn: () => AccountsService.fetchAccount(id),
+        enabled: Boolean(id),
     });
 
     return {

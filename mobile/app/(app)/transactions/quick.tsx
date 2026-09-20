@@ -24,6 +24,7 @@ import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
 import { useCategorySuggestion } from '@/src/hooks/useCategorySuggestion';
 import { confirmAlert } from '@/src/utils/confirmAlert';
 import { formatCurrency } from '@/src/utils/currency';
+import ScreenHeader from '@/src/components/navigation/ScreenHeader';
 
 type QuickType = 'EXPENSE' | 'INCOME';
 
@@ -140,12 +141,14 @@ export default function QuickAddTransactionScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.handle} />
-        <View style={styles.topRow}>
-          <Text style={styles.headline}>Quick add</Text>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="close" size={24} color={COLORS.text} />
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title="Quick add"
+          backIcon="close"
+          breadcrumbs={[
+            { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+            { label: 'Quick add' },
+          ]}
+        />
         <Text style={styles.help}>Amount, category, save. Title is optional.</Text>
 
         <View style={styles.toggle}>

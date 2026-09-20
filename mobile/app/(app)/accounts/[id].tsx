@@ -18,6 +18,8 @@ import { useAccount } from '@/src/hooks/useAccount';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 import { confirmAlert } from '@/src/utils/confirmAlert';
+import { getApiErrorMessage } from '@/src/api/error';
+import { accountToFormValues, formValuesToUpdatePayload } from '@/src/utils/account-form';
 
 export default function UpdateAccountScreen() {
     const {
@@ -26,11 +28,11 @@ export default function UpdateAccountScreen() {
         archiveAccount,
     } = useAccounts();
 
-    const { id } = useLocalSearchParams();
+    const { id } = useLocalSearchParams<{ id: string | string[] }>();
 
-    const accountId = typeof id === 'string' ? id : id.join("")
+    const accountId = Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
 
-    const { account, loading } = useAccount(accountId);
+    const { account, loading, error } = useAccount(accountId);
 
     async function onSubmit(
         values: AccountFormSchema,
@@ -38,16 +40,14 @@ export default function UpdateAccountScreen() {
         try {
             await updateAccount({
                 id: accountId,
-                payload: values
+                payload: formValuesToUpdatePayload(values),
             });
 
-            router.push('/accounts');
-        } catch (error: any) {
+            router.back();
+        } catch (error: unknown) {
             confirmAlert(
-                'Unable to create account',
-                error?.response?.data?.message ??
-                error?.message ??
-                'Something went wrong.',
+                'Unable to update account',
+                getApiErrorMessage(error, 'Something went wrong.'),
             );
         }
     }
@@ -61,31 +61,53 @@ export default function UpdateAccountScreen() {
                 'Account archived successfully.',
             );
 
-            router.push('/accounts');
-        } catch (error: any) {
+            router.replace('/accounts');
+        } catch (error: unknown) {
             confirmAlert(
-                'Unable to create account',
-                error?.response?.data?.message ??
-                error?.message ??
-                'Something went wrong.',
+                'Unable to archive account',
+                getApiErrorMessage(error, 'Something went wrong.'),
             );
         }
     }
 
-    if (loading) {
-        return <ActivityIndicator />;
+    const accountBreadcrumbs = [
+        { label: 'Accounts', href: '/accounts' },
+        { label: 'Edit' },
+    ];
+
+    if (!accountId) {
+        return (
+            <ScreenContainer scrollable title="Edit account" breadcrumbs={accountBreadcrumbs}>
+                <Text>Invalid account.</Text>
+            </ScreenContainer>
+        );
     }
 
-    if (!account) {
+    if (loading) {
         return (
-            <Text>Account not found.</Text>
+            <ScreenContainer scrollable title="Edit account" breadcrumbs={accountBreadcrumbs}>
+                <ActivityIndicator />
+            </ScreenContainer>
+        );
+    }
+
+    if (error || !account?.id) {
+        return (
+            <ScreenContainer scrollable title="Edit account" breadcrumbs={accountBreadcrumbs}>
+                <Text>{error ? getApiErrorMessage(error, 'Could not load account.') : 'Account not found.'}</Text>
+            </ScreenContainer>
         );
     }
 
     return (
-        <ScreenContainer scrollable>
+        <ScreenContainer
+            scrollable
+            title="Edit account"
+            breadcrumbs={accountBreadcrumbs}
+        >
             <AccountForm
-                defaultValues={account}
+                key={account.id}
+                defaultValues={accountToFormValues(account)}
                 submitText="Save Changes"
                 loading={updating}
                 onSubmit={onSubmit}

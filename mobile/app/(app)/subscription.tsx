@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
 import Screen from '@/src/components/common/Screen';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 import { SubscriptionsApi } from '@/src/api/subscriptions.api';
@@ -27,15 +26,15 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <Screen scroll accessibilityLabel="Subscription plans">
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Plans</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
+    <Screen
+      scroll
+      title="Plans"
+      breadcrumbs={[
+        { label: 'Settings', href: '/settings' },
+        { label: 'Subscription' },
+      ]}
+      accessibilityLabel="Subscription plans"
+    >
       <View style={styles.card}>
         <Text style={styles.plan}>Current: {data?.plan ?? 'FREE'}</Text>
         <Text style={styles.muted}>
@@ -54,8 +53,6 @@ export default function SubscriptionScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  title: { flex: 1, textAlign: 'center', fontSize: 22, fontWeight: '800', color: COLORS.text },
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,

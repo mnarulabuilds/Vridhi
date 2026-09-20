@@ -34,7 +34,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <Screen scroll accessibilityLabel="Onboarding">
+    <Screen scroll showBack={false} accessibilityLabel="Onboarding">
       <Text style={styles.title}>Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
       <Text style={styles.subtitle}>Set up your first account to track balances and net worth.</Text>
 

@@ -50,7 +50,14 @@ export default function CreateTransactionScreen() {
   }
 
   return (
-    <ScreenContainer title="Add Transaction" scrollable>
+    <ScreenContainer
+      title="Add transaction"
+      scrollable
+      breadcrumbs={[
+        { label: 'Transactions', href: '/(app)/(tabs)/transactions' },
+        { label: 'New' },
+      ]}
+    >
       <TransactionForm
         accounts={accounts}
         categories={categories}

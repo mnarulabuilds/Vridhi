@@ -2,7 +2,6 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
 import Screen from '@/src/components/common/Screen';
 import EmptyState from '@/src/components/common/EmptyState';
 import { PortfolioApi } from '@/src/api/portfolio.api';
@@ -17,15 +16,15 @@ export default function PortfolioScreen() {
   });
 
   return (
-    <Screen scroll accessibilityLabel="Investment portfolio">
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Portfolio</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
+    <Screen
+      scroll
+      title="Portfolio"
+      breadcrumbs={[
+        { label: 'Settings', href: '/settings' },
+        { label: 'Portfolio' },
+      ]}
+      accessibilityLabel="Investment portfolio"
+    >
       {isLoading ? (
         <ActivityIndicator color={COLORS.primary} />
       ) : error ? (
@@ -52,8 +51,6 @@ export default function PortfolioScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  title: { flex: 1, textAlign: 'center', fontSize: 22, fontWeight: '800', color: COLORS.text },
   metric: { fontSize: 24, fontWeight: '800', color: COLORS.text },
   sub: { color: COLORS.textLight, marginTop: 8 },
   refresh: { marginTop: 24, color: COLORS.primary, fontWeight: '700', textAlign: 'center' },

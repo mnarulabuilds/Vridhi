@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import ScreenHeader from '@/src/components/navigation/ScreenHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -14,7 +14,6 @@ import { Switch } from 'react-native';
 import UserStorage from '@/src/storage/user.storage';
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const { user, logout, setUser } = useAuth();
   const { biometrics, toggleBiometrics } = useBiometrics();
   const [name, setName] = useState(user?.name ?? '');
@@ -79,7 +78,13 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Profile</Text>
+        <ScreenHeader
+          title="Profile"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/(app)/(tabs)' },
+            { label: 'Profile' },
+          ]}
+        />
         <Text style={styles.email}>{user?.email}</Text>
 
         <Text style={styles.label}>Name</Text>
@@ -125,8 +130,6 @@ export default function ProfileScreen() {
         <PrimaryButton title="Delete my account" onPress={deleteAccount} />
 
         <View style={{ height: 16 }} />
-        <PrimaryButton title="Back" onPress={() => router.back()} />
-        <View style={{ height: 12 }} />
         <PrimaryButton title="Log out" onPress={logout} />
       </ScrollView>
     </SafeAreaView>
