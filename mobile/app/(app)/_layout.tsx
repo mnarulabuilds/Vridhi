@@ -2,6 +2,7 @@ import { Redirect, Stack, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '@/src/providers/auth-provider';
 import { useBiometrics } from '@/src/providers/biometric-provider';
+import { needsOnboarding } from '@/src/navigation/app-entry';
 import { COLORS } from '@/src/theme';
 
 export default function AppLayout() {
@@ -26,8 +27,12 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/unlock" />;
   }
 
-  if (user && !user.onboardingCompletedAt && !onOnboarding) {
+  if (needsOnboarding(user) && !onOnboarding) {
     return <Redirect href="/(app)/onboarding" />;
+  }
+
+  if (user?.onboardingCompletedAt && onOnboarding) {
+    return <Redirect href="/(app)/(tabs)" />;
   }
 
   return (

@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import AuthService from '@/src/services/auth.service';
+import UserStorage from '@/src/storage/user.storage';
 
 import {
   LoginRequest,
@@ -29,17 +30,17 @@ interface AuthContextType {
 
   login(
     payload: LoginRequest,
-  ): Promise<void>;
+  ): Promise<AuthenticatedUser>;
 
   register(
     payload: RegisterRequest,
-  ): Promise<void>;
+  ): Promise<AuthenticatedUser>;
 
   logout(): Promise<void>;
 
   refreshUser(): Promise<void>;
 
-  setUser(user: AuthenticatedUser): void;
+  setUser(user: AuthenticatedUser | null): void;
 }
 
 const AuthContext =
@@ -62,17 +63,39 @@ export function AuthProvider({
     restoreSession();
   }, []);
 
+  function persistUser(user: AuthenticatedUser) {
+    void UserStorage.saveCurrentUser(user);
+  }
+
+  function updateUser(user: AuthenticatedUser | null) {
+    setUser(user);
+    if (user) {
+      persistUser(user);
+    }
+  }
+
   async function restoreSession() {
     try {
-      const [token, storedUser] =
-        await Promise.all([
-          AuthService.getAccessToken(),
-          AuthService.getCurrentUser(),
-        ]);
+      const token = await AuthService.getAccessToken();
 
-      if (token && storedUser) {
-        setAccessToken(token);
-        setUser(storedUser);
+      if (!token) {
+        return;
+      }
+
+      setAccessToken(token);
+
+      try {
+        const freshUser = await AuthService.me();
+        setUser(freshUser);
+      } catch {
+        const storedUser = await AuthService.getCurrentUser();
+        if (storedUser) {
+          setUser(storedUser);
+        } else {
+          await AuthService.clearSession();
+          setAccessToken(null);
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error(
@@ -94,7 +117,8 @@ export function AuthProvider({
 
     setAccessToken(result.accessToken);
 
-    setUser(result.user);
+    updateUser(result.user);
+    return result.user;
   }
 
   async function register(
@@ -105,14 +129,15 @@ export function AuthProvider({
 
     setAccessToken(result.accessToken);
 
-    setUser(result.user);
+    updateUser(result.user);
+    return result.user;
   }
 
   async function refreshUser() {
     const user =
       await AuthService.me();
 
-    setUser(user);
+    updateUser(user);
   }
 
   async function logout() {
@@ -145,7 +170,7 @@ export function AuthProvider({
 
       refreshUser,
 
-      setUser,
+      setUser: updateUser,
     }),
     [
       user,

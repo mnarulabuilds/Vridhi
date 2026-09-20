@@ -23,6 +23,8 @@ import PasswordInput from '@/src/components/form/PasswordInput';
 import PrimaryButton from '@/src/components/form/PrimaryButton';
 
 import { useAuth } from '@/src/providers/auth-provider';
+import BrandLogo from '@/src/components/brand/BrandLogo';
+import { appEntryHref } from '@/src/navigation/app-entry';
 
 import {
   registerSchema,
@@ -59,13 +61,13 @@ export default function RegisterScreen() {
     values: RegisterForm,
   ) {
     try {
-      await register({
+      const signedUpUser = await register({
         name: values.name,
         email: values.email,
         password: values.password,
       });
 
-      router.replace('/(app)/(tabs)');
+      router.replace(appEntryHref(signedUpUser));
     } catch (error: any) {
       confirmAlert(
         'Registration Failed',
@@ -87,11 +89,7 @@ export default function RegisterScreen() {
       <ScreenContainer scrollable>
         <View style={styles.container}>
           <View style={styles.header}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>
-                V
-              </Text>
-            </View>
+            <BrandLogo size={96} style={styles.logo} />
 
             <Text style={styles.title}>
               Create Account
@@ -188,20 +186,7 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor:
-      COLORS.primaryDark,
     marginBottom: 24,
-  },
-
-  logoText: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-    fontSize: 42,
   },
 
   title: {

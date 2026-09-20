@@ -1,14 +1,15 @@
 import { Redirect, Stack, usePathname } from 'expo-router';
 import { useAuth } from '@/src/providers/auth-provider';
 import { useBiometrics } from '@/src/providers/biometric-provider';
+import { appEntryHref } from '@/src/navigation/app-entry';
 
 export default function AuthLayout() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const { biometrics, isUnlocked } = useBiometrics();
   const pathname = usePathname();
 
   if (!loading && isAuthenticated && !(biometrics && !isUnlocked)) {
-    return <Redirect href="/(app)/(tabs)" />;
+    return <Redirect href={appEntryHref(user)} />;
   }
 
   if (!loading && isAuthenticated && biometrics && !isUnlocked && !pathname.includes('unlock')) {

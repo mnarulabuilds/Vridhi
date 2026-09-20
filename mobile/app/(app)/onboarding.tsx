@@ -7,6 +7,7 @@ import { COLORS, SIZES } from '@/src/theme';
 import { useAuth } from '@/src/providers/auth-provider';
 import { UsersApi } from '@/src/api/users.api';
 import { useAccounts } from '@/src/hooks/useAccounts';
+import BrandLogo from '@/src/components/brand/BrandLogo';
 
 export default function OnboardingScreen() {
   const { user, setUser } = useAuth();
@@ -35,6 +36,7 @@ export default function OnboardingScreen() {
 
   return (
     <Screen scroll showBack={false} accessibilityLabel="Onboarding">
+      <BrandLogo size={80} style={styles.logo} />
       <Text style={styles.title}>Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
       <Text style={styles.subtitle}>Set up your first account to track balances and net worth.</Text>
 
@@ -61,6 +63,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  logo: { marginBottom: 20, alignSelf: 'center' },
   title: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
   subtitle: { color: COLORS.textLight, marginBottom: 24, lineHeight: 22 },
   label: { fontWeight: '600', color: COLORS.text, marginBottom: 6 },

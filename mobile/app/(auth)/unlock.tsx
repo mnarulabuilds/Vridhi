@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import BrandLogo from '@/src/components/brand/BrandLogo';
 import { COLORS, SHADOWS } from '@/src/theme';
 import { useBiometrics } from '@/src/providers/biometric-provider';
 import { confirmAlert } from '@/src/utils/confirmAlert';
@@ -81,6 +82,7 @@ export default function UnlockScreen() {
       />
 
       <View style={styles.content}>
+        <BrandLogo size={88} style={styles.logo} />
         <Text style={styles.title}>
           Unlock Vridhi
         </Text>
@@ -118,6 +120,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
+  },
+
+  logo: {
+    marginBottom: 28,
   },
 
   title: {
