@@ -8,12 +8,14 @@
     "dev:web": "./scripts/dev.sh --web",
     "dev:api": "./scripts/dev.sh --api-only",
     "setup": "./scripts/dev.sh --setup --api-only",
+    "test": "npm --prefix backend test",
+    "test:cov": "npm --prefix backend run test:cov",
+    "deploy:init": "./scripts/deploy.sh init",
+    "deploy:live": "./scripts/deploy.sh live",
+    "deploy:live:local": "./scripts/deploy.sh live --local",
     "deploy": "./scripts/deploy.sh api",
-    "deploy:api": "./scripts/deploy.sh api",
-    "deploy:api:local": "./scripts/deploy.sh api --local",
     "deploy:mobile": "./scripts/deploy.sh mobile",
     "deploy:play": "./scripts/deploy.sh play",
-    "deploy:init": "./scripts/deploy.sh init",
     "deploy:status": "./scripts/deploy.sh status"
   }
 }

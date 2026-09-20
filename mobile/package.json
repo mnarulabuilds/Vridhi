@@ -7,10 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
-    "build:preview": "npx eas-cli build --profile preview --platform android",
-    "build:production": "npx eas-cli build --profile production --platform android",
-    "submit:play": "npx eas-cli submit --platform android --profile production --latest"
+    "lint": "expo lint"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

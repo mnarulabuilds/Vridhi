@@ -52,14 +52,20 @@ Ask answers spending, savings rate, budgets, balances, and recurring/unusual not
 
 ## Deploy
 
-Backend goes to **Render**. The Android app is a separate EAS build that bakes in that HTTPS URL.
+Backend goes to **Render** (Postgres + API + migrations in Docker). CORS defaults to permissive when `CORS_ORIGINS` is empty or `*`, so Expo web and native clients work out of the box.
 
 ```bash
 # once
 brew install render && render login
 (cd mobile && npx eas-cli login)
 
-# .env.production
+# First time: apply render.yaml in Render (New → Blueprint), or create Web Service + Postgres manually.
+npm run deploy:init            # writes .env.production with JWT_SECRET
+
+npm run deploy:live            # init + Render deploy + sync live URL into mobile/.env
+npm run deploy:live:local      # Docker Postgres + API + Cloudflare HTTPS tunnel (no Render account)
+
+# .env.production (updated automatically after deploy:live when possible)
 #   API_DOMAIN=your-service.onrender.com
 #   EXPO_PUBLIC_API_URL=https://your-service.onrender.com
 #   RENDER_SERVICE_ID=srv-...   # optional; Dashboard → service Settings
@@ -70,7 +76,9 @@ npm run deploy:mobile        # Android APK against that URL
 npm run deploy:play          # production AAB → Play Console (internal draft)
 ```
 
-Local Docker (this machine only): `npm run deploy:api:local`
+Local Docker (this machine only): `npm run deploy -- --local`
+
+Unit tests (backend; enforces ≥75% coverage): `npm run test:cov` from the repo root.
 
 `DATABASE_URL` on Render must be the Postgres **Internal Database URL**, never `localhost`. See `render.yaml` for a Blueprint that wires this automatically.
 

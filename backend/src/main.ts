@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { buildCorsOptions } from './config/cors';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,14 +20,7 @@ async function bootstrap() {
     }),
   );
 
-  const origins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  app.enableCors({
-    origin: origins.length ? origins : false,
-    credentials: true,
-  });
+  app.enableCors(buildCorsOptions(process.env.CORS_ORIGINS));
 
   if (process.env.NODE_ENV !== 'production') {
     const swagger = new DocumentBuilder()

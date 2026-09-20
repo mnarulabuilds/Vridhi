@@ -9,9 +9,6 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,7 +16,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npm test -- --ci --passWithNoTests
-      - run: npm run build
+      - run: npm ci --prefix backend
+      - run: npm --prefix backend exec prisma generate
+      - run: npm run test:cov -- --ci
+      - run: npm --prefix backend run build

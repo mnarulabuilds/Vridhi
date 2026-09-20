@@ -17,6 +17,7 @@ WAIT_EAS=0
 SUBMIT_ONLY=0
 SKIP_SUBMIT=0
 LOCAL_API=0
+USE_TUNNEL=0
 LAN_PROXY_PORT="${LAN_PROXY_PORT:-8787}"
 API_URL_OVERRIDE="${EXPO_PUBLIC_API_URL:-}"
 ENV_FILE=""
@@ -41,6 +42,7 @@ usage() {
 Deploy Vridhi.
 
 Usage:
+  npm run deploy:live             One-shot live API (Render, or --local for Docker + public tunnel)
   npm run deploy                  Backend on Render
   npm run deploy:mobile           Android APK (EAS) using the Render API URL
   npm run deploy:play             Production AAB + upload to Play Console (internal draft)
@@ -50,6 +52,7 @@ Usage:
   ./scripts/deploy.sh [command] [options]
 
 Commands:
+  live      Init env if needed, deploy API + DB, sync public URL and CORS-friendly defaults
   api       Deploy the backend (Render by default)
   mobile    Build the Expo app against EXPO_PUBLIC_API_URL
   play      Production Android App Bundle and submit to Play (internal track, draft)
@@ -57,7 +60,8 @@ Commands:
   init      Write .env.production if it is missing
 
 Options:
-  --local                Run the API with Docker Compose on this machine
+  --local                Run Postgres + API with Docker Compose on this machine
+  --tunnel               With --local: expose HTTPS via Cloudflare quick tunnel (needs cloudflared)
   --host user@server     Copy the API over SSH and run Compose there
   --platform android|ios|all
   --profile preview|production|development
@@ -238,6 +242,76 @@ process.exit(list.length === 0 ? 2 : 3);
   die "Select a Render workspace first: render workspaces && render workspace set <id>"
 }
 
+sync_render_api_url() {
+  find_env_file
+  require_render_cli
+  ensure_render_workspace
+  local service_id json url domain
+  service_id="$(resolve_render_service_id)"
+  json="$(render services -o json 2>/dev/null)" || die "Could not list Render services."
+  domain="$(RENDER_SERVICE_ID="$service_id" node -e '
+const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
+const list = Array.isArray(data) ? data : (data.items || data.services || data.data || []);
+const id = process.env.RENDER_SERVICE_ID;
+const item = list.map((row) => row.service || row).find((s) => s && s.id === id);
+const raw = String((item && item.serviceDetails && item.serviceDetails.url) || item?.url || "");
+let host = "";
+if (raw) {
+  try {
+    host = new URL(raw.includes("://") ? raw : "https://" + raw).host;
+  } catch {
+    host = raw.replace(/\\/+$/, "");
+  }
+}
+process.stdout.write(host);
+' <<<"$json")"
+  [[ -n "$domain" && "$domain" != *your-service* ]] || return 0
+  url="https://${domain}"
+  persist_env_key API_DOMAIN "$domain"
+  persist_env_key EXPO_PUBLIC_API_URL "$url"
+  if [[ -z "$(env_get CORS_ORIGINS)" ]]; then
+    persist_env_key CORS_ORIGINS "*"
+  fi
+  write_mobile_api_url "$url"
+  ok "Synced live URL to ${url}"
+}
+
+start_cloudflare_tunnel() {
+  require_cmd cloudflared "Install cloudflared: brew install cloudflared"
+  local port pidfile logfile url
+  port="$(env_get PORT)"
+  port="${port:-3001}"
+  pidfile="$ROOT/.dev/cloudflared.pid"
+  logfile="$ROOT/.dev/cloudflared.log"
+  mkdir -p "$ROOT/.dev"
+  if [[ -f "$pidfile" ]]; then
+    local oldpid
+    oldpid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [[ -n "$oldpid" ]] && kill -0 "$oldpid" 2>/dev/null; then
+      warn "Cloudflare tunnel already running (pid ${oldpid})"
+      return 0
+    fi
+  fi
+  : >"$logfile"
+  log "Starting Cloudflare quick tunnel to http://127.0.0.1:${port} ..."
+  cloudflared tunnel --url "http://127.0.0.1:${port}" >>"$logfile" 2>&1 &
+  echo $! >"$pidfile"
+  url=""
+  for ((i = 1; i <= 45; i++)); do
+    url="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$logfile" 2>/dev/null | head -1 || true)"
+    [[ -n "$url" ]] && break
+    sleep 1
+  done
+  [[ -n "$url" ]] || die "Tunnel URL not found. See ${logfile}"
+  persist_env_key EXPO_PUBLIC_API_URL "$url"
+  persist_env_key API_DOMAIN "$(normalize_domain "$url")"
+  persist_env_key CORS_ORIGINS "*"
+  write_mobile_api_url "$url"
+  ok "Public HTTPS API: ${url}"
+  log "Health: ${url}/health"
+  log "Set EXPO_PUBLIC_API_URL=${url} on devices (already written to mobile/.env)."
+}
+
 persist_env_key() {
   local key="$1" value="$2"
   [[ -n "$ENV_FILE" && -f "$ENV_FILE" && -n "$value" ]] || return 0
@@ -319,6 +393,8 @@ deploy_api_render() {
   [[ -n "$api_url" ]] || die "Set EXPO_PUBLIC_API_URL or API_DOMAIN in .env.production to https://your-service.onrender.com"
   log "${BOLD}Deploying API on Render (${service_id})${RESET}"
   render deploys create "$service_id" --wait --confirm
+  sync_render_api_url
+  api_url="$(public_api_url)"
   wait_for_health "${api_url}/health" 90
   write_mobile_api_url "$api_url"
   ok "Backend is live at ${api_url}"
@@ -415,6 +491,30 @@ deploy_api_local() {
   if [[ -n "$lan" ]]; then
     ok "Phone URL: http://${lan}:${LAN_PROXY_PORT}"
   fi
+  if [[ "$USE_TUNNEL" -eq 1 ]]; then
+    start_cloudflare_tunnel "$port"
+  fi
+}
+
+cmd_live() {
+  cmd_init
+  find_env_file
+  if [[ -z "$(env_get CORS_ORIGINS)" ]]; then
+    persist_env_key CORS_ORIGINS "*"
+  fi
+  if [[ "$LOCAL_API" -eq 1 ]]; then
+    USE_TUNNEL=1
+    deploy_api_local
+    ok "Local stack is up (Postgres + API)."
+    if [[ -z "$(public_api_url)" ]]; then
+      local port
+      port="$(env_get PORT)"
+      port="${port:-3001}"
+      ok "LAN API: http://127.0.0.1:${port}"
+    fi
+    return 0
+  fi
+  deploy_api_render
 }
 
 deploy_api_remote() {
@@ -613,7 +713,7 @@ cmd_status() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    all | api | mobile | play | init | status)
+    all | api | live | mobile | play | init | status)
       TARGET="$1"
       shift
       ;;
@@ -623,6 +723,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local)
       LOCAL_API=1
+      shift
+      ;;
+    --tunnel)
+      USE_TUNNEL=1
       shift
       ;;
     --wait)
@@ -684,6 +788,7 @@ done
 case "$TARGET" in
   init) cmd_init ;;
   status) cmd_status ;;
+  live) cmd_live ;;
   api) cmd_api ;;
   mobile) cmd_mobile ;;
   play) cmd_play ;;
